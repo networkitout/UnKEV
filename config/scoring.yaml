@@ -21,6 +21,17 @@ inherited:
   unconfirmed_edge_weight: 0.6   # edge not yet checked against the vendor's own advisory
   lag_factor_min: 0.5            # lag_factor = min + (1 - min) * vendor_lag / 3
 
+# Activity is baseline-relative: it reacts to a change in a component's CVE
+# rate, not the level, so chronic churn (ImageMagick, libxml2) stops pinning
+# the top. expected = baseline mass * recent_window / (baseline_window - recent_window);
+# activity = saturate(max(0, recent - beta * expected) + bonuses). Bonuses are
+# never baseline-subtracted: an emergency release is anomalous by definition.
+activity_baseline:
+  recent_window_days: 30
+  baseline_window_days: 180      # baseline = signals aged recent_window..baseline_window
+  beta: 1.0                      # how much of the expected mass to subtract
+  min_history_days: 150          # below this, beta is forced to 0 (cold start)
+
 # Per-signal bonuses added to activity before saturation.
 bonuses:
   emergency_release: 0.5
@@ -45,5 +56,5 @@ exposure:
   unknown_default: 0.5   # no inventory evidence either way: do not treat as zero
   none_value: 0.05       # inventory says confirmed absent
 
-# Signals older than this are ignored entirely.
+# Signals older than this are ignored entirely. Must be >= activity_baseline.baseline_window_days.
 max_signal_age_days: 180

@@ -12,6 +12,12 @@
       <span class="num">{{ r.points[k] }}</span>
     {% endfor %}
   </div>
+  {% if r.activity_ratio is defined and r.activity_ratio is not none and r.activity_ratio >= 1.5 %}
+    <div class="rate">{{ "%.1f"|format(r.activity_ratio) }}× its usual CVE rate</div>
+  {% endif %}
+  {% if r.baseline_ready is defined and not r.baseline_ready %}
+    <div class="rate muted">baseline warming up</div>
+  {% endif %}
 
   <div class="sect">Estate exposure</div>
   <div class="kv">

@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 from . import llm
 from .collectors.epss import collect_epss
@@ -15,7 +15,7 @@ from .config import get_settings, load_yaml
 from .db import DB, iso, utcnow
 from .inventory import sync_inventory
 from .matching import Matcher
-from .scoring import score_all
+from .scoring import score_all, validate_config
 
 log = logging.getLogger("unkev")
 _lock = asyncio.Lock()
@@ -28,6 +28,7 @@ class Ctx:
         self.components = load_yaml("components.yaml")
         self.feeds = load_yaml("feeds.yaml")
         self.scoring = load_yaml("scoring.yaml")
+        validate_config(self.scoring)
         self.inventory_cfg = load_yaml("inventory.yaml")
         self.appliances = load_yaml("appliances.yaml").get("appliances") or []
         self.matcher = Matcher(self.components, self.feeds.get("prefilter_terms") or [])
@@ -151,11 +152,27 @@ async def job_inventory(ctx: Ctx):
     return stats
 
 
+def history_days(db: DB) -> int | None:
+    """Days of NVD history the signal store covers, from kv nvd_history_from
+    (written by scripts/backfill_nvd.py and by the first NVD run). None until then."""
+    v = db.get_kv("nvd_history_from")
+    if not v:
+        return None
+    dt = datetime.fromisoformat(v)
+    if not dt.tzinfo:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return (utcnow() - dt).days
+
+
 def job_score_sync(ctx: Ctx) -> dict:
     since = iso(utcnow() - timedelta(days=ctx.scoring.get("max_signal_age_days", 180)))
-    results = score_all(ctx.components, ctx.db.signals_since(since), ctx.db.inventory(), ctx.scoring)
+    hist = history_days(ctx.db)
+    results = score_all(ctx.components, ctx.db.signals_since(since), ctx.db.inventory(), ctx.scoring,
+                        history_days=hist)
     ctx.db.write_snapshot(iso(utcnow()), results)
-    return {"components": len(results), "top": [r["component_id"] for r in results[:5]]}
+    return {"components": len(results), "history_days": hist,
+            "baseline_ready": bool(results and results[0]["baseline_ready"]),
+            "top": [r["component_id"] for r in results[:5]]}
 
 
 async def job_score(ctx: Ctx):

@@ -106,12 +106,13 @@ async def api_scores_csv(_: str = Depends(require_auth)):
     ts, rows = pipeline.Ctx().db.latest_snapshot()
     buf = io.StringIO()
     w = csv.writer(buf)
+    terms = ("prior", "activity", "spillover", "inherited", "exploit")
     w.writerow(["snapshot", "rank", "component", "priority", "likelihood", "exposure", "exposure_status",
-                "prior", "activity", "spillover", "exploit", "hosts", "internet_facing", "top_driver"])
+                *terms, "hosts", "internet_facing", "top_driver"])
     for r in rows:
         inv = r["inventory"]
         w.writerow([ts, r["rank"], r["name"], r["priority"], r["likelihood"], r["exposure"],
-                    r["exposure_status"], *[r["points"][k] for k in ("prior", "activity", "spillover", "exploit")],
+                    r["exposure_status"], *[r["points"].get(k, 0) for k in terms],
                     inv.get("hosts", 0), inv.get("internet_facing", 0),
                     r["drivers"][0]["label"] if r["drivers"] else ""])
     buf.seek(0)

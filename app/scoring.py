@@ -74,18 +74,39 @@ def _label(s: dict) -> str:
     return head + (f" ({', '.join(flags)})" if flags else "")
 
 
+def validate_config(cfg: dict) -> None:
+    """Fail loudly on a scoring.yaml that would silently mis-score."""
+    ab = cfg["activity_baseline"]
+    w, b = ab["recent_window_days"], ab["baseline_window_days"]
+    if not 0 < w < b:
+        raise ValueError(f"scoring.yaml: need 0 < recent_window_days ({w}) < baseline_window_days ({b})")
+    if cfg.get("max_signal_age_days", 180) < b:
+        raise ValueError(f"scoring.yaml: max_signal_age_days must be >= baseline_window_days ({b}), "
+                         f"or the baseline window is silently truncated")
+
+
 def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[str, dict],
-              cfg: dict, now: datetime | None = None) -> list[dict]:
+              cfg: dict, now: datetime | None = None, history_days: int | None = None) -> list[dict]:
+    """history_days: how far back the signal store is known to be complete. Below
+    activity_baseline.min_history_days (or None) the baseline isn't trusted:
+    beta is forced to 0 and every result carries baseline_ready=False."""
+    validate_config(cfg)
     now = now or datetime.now(timezone.utc)
     w = cfg["weights"]
     hl = cfg["half_life_days"]
     bonus = cfg["bonuses"]
     lv = cfg["exploit_levels"]
     inh = cfg["inherited"]
+    ab = cfg["activity_baseline"]
     wsum = sum(w.values())
     max_age = cfg.get("max_signal_age_days", 180)
+    W, B = ab["recent_window_days"], ab["baseline_window_days"]
+    baseline_ready = history_days is not None and history_days >= ab["min_history_days"]
+    beta = float(ab["beta"]) if baseline_ready else 0.0
 
-    activity = {cid: 0.0 for cid in components}
+    recent_base = {cid: 0.0 for cid in components}    # severity mass, last W days, decayed
+    recent_bonus = {cid: 0.0 for cid in components}   # emergency/PoC/embargo mass, last W days, decayed
+    base_mass = {cid: 0.0 for cid in components}      # severity mass aged W..B days, undecayed
     spill = {cid: 0.0 for cid in components}
     exploit = {cid: 0.0 for cid in components}
     inherited = {cid: 0.0 for cid in components}
@@ -114,12 +135,18 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
             continue
         conf = float(s.get("confidence", 0.7))
 
-        raw = sev_weight(s.get("cvss"))
-        raw += bonus["emergency_release"] * bool(s.get("emergency"))
-        raw += bonus["poc_public"] * bool(s.get("poc_public"))
-        raw += bonus["embargo_broken"] * bool(s.get("embargo_broken"))
-        a = raw * decay(age, hl["activity"]) * conf
-        activity[cid] += a
+        sev = sev_weight(s.get("cvss"))
+        bon = (bonus["emergency_release"] * bool(s.get("emergency"))
+               + bonus["poc_public"] * bool(s.get("poc_public"))
+               + bonus["embargo_broken"] * bool(s.get("embargo_broken")))
+        raw = sev + bon
+        d_act = decay(age, hl["activity"])
+        a = raw * d_act * conf
+        if age < W:
+            recent_base[cid] += sev * conf * d_act
+            recent_bonus[cid] += bon * conf * d_act
+        elif age < B:
+            base_mass[cid] += sev * conf
 
         # Inherited: a bug in X raises likelihood for every product that bundles X.
         # Exploitation is deliberately NOT inherited. Exploitability inside the host
@@ -168,9 +195,10 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
 
     results = []
     for cid, c in components.items():
+        expected = base_mass[cid] * W / (B - W)
         terms = {
             "prior": prior_score(c.get("priors")),
-            "activity": saturate(activity[cid]),
+            "activity": saturate(max(0.0, recent_base[cid] - beta * expected) + recent_bonus[cid]),
             "spillover": saturate(spill[cid]),
             "inherited": saturate(inherited[cid]),
             "exploit": min(exploit[cid], 1.0),
@@ -188,6 +216,10 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
             "priority": priority, "points": points, "drivers": top,
             "exposure_factor": round(factor, 3),
             "term_max": {k: round(100 * w[k] / wsum, 1) for k in terms},
+            "activity_recent": round(recent_base[cid], 3),
+            "activity_expected": round(expected, 3),
+            "activity_ratio": round(recent_base[cid] / expected, 2) if expected > 0 else None,
+            "baseline_ready": baseline_ready,
             "surfaces": c.get("surfaces") or [],
             "inventory": inventory.get(cid) or {"status": "unknown"},
             "signal_count": sum(1 for d in drivers[cid] if d[1]["kind"] == "direct"),

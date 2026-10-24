@@ -72,20 +72,36 @@ def process_nvd_page(vulns: list[dict], db: DB, matcher, cfg: dict) -> dict:
     return stats
 
 
-async def collect_nvd(client, db: DB, matcher, cfg: dict, api_key: str | None) -> dict:
-    end = utcnow().replace(microsecond=0)
-    last = db.get_kv("nvd_last_end")
-    start = (datetime.fromisoformat(last) if last
-             else end - timedelta(days=cfg.get("initial_lookback_days", 14)))
-    start = max(start, end - timedelta(days=119))
+# TODO(verify) NVD caps a date range at 120 days; 119 leaves slack for clock skew.
+MAX_WINDOW_DAYS = 119
+
+
+def nvd_pause(api_key: str | None) -> float:
+    """Seconds between requests. TODO(verify) roughly 5 req/30s without a key, 50 with."""
+    return 0.7 if api_key else 6.5
+
+
+def _nvd_ts(dt: datetime) -> str:
+    # TODO(verify) NVD 2.0 date format, including the required milliseconds and offset.
+    return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000+00:00")
+
+
+async def fetch_nvd_window(client, db: DB, matcher, cfg: dict, api_key: str | None,
+                           start: datetime, end: datetime, date_field: str = "lastMod") -> dict:
+    """Page through one [start, end] window and process every result.
+
+    date_field selects which NVD date the window applies to: "lastMod" for
+    incremental sync (anything touched since last run), "pub" for backfill
+    (anything published in the window). TODO(verify) the parameter names.
+    """
+    if end - start > timedelta(days=MAX_WINDOW_DAYS):
+        raise ValueError(f"NVD window {start}..{end} exceeds {MAX_WINDOW_DAYS} days")
     headers = {"apiKey": api_key} if api_key else {}
-    pause = 0.7 if api_key else 6.5
     total = {"seen": 0, "matched": 0, "queued": 0, "unmapped": 0}
     idx = 0
     while True:
         params = {
-            "lastModStartDate": start.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
-            "lastModEndDate": end.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000+00:00"),
+            f"{date_field}StartDate": _nvd_ts(start), f"{date_field}EndDate": _nvd_ts(end),
             "resultsPerPage": 2000, "startIndex": idx,
         }
         r = await client.get(cfg["url"], params=params, headers=headers)
@@ -97,6 +113,19 @@ async def collect_nvd(client, db: DB, matcher, cfg: dict, api_key: str | None) -
         idx += int(data.get("resultsPerPage") or 0)
         if not data.get("resultsPerPage") or idx >= int(data.get("totalResults") or 0):
             break
-        await asyncio.sleep(pause)
+        await asyncio.sleep(nvd_pause(api_key))
+    return total
+
+
+async def collect_nvd(client, db: DB, matcher, cfg: dict, api_key: str | None) -> dict:
+    end = utcnow().replace(microsecond=0)
+    last = db.get_kv("nvd_last_end")
+    start = (datetime.fromisoformat(last) if last
+             else end - timedelta(days=cfg.get("initial_lookback_days", 14)))
+    start = max(start, end - timedelta(days=MAX_WINDOW_DAYS))
+    total = await fetch_nvd_window(client, db, matcher, cfg, api_key, start, end)
     db.set_kv("nvd_last_end", end.isoformat())
+    if not db.get_kv("nvd_history_from"):
+        # First run: history begins here. The backfill script moves it earlier.
+        db.set_kv("nvd_history_from", start.isoformat())
     return total

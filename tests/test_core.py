@@ -13,7 +13,7 @@ from app.db import DB
 from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
 from app.matching import Matcher
-from app.scoring import decay, exposure_score, prior_score, saturate, score_all
+from app.scoring import decay, exposure_score, prior_score, saturate, score_all, validate_config
 from app.views import brief_html
 
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
@@ -124,6 +124,61 @@ class Scoring(unittest.TestCase):
         sigs = [sig("php"), sig("nodejs")]
         res = by_id(score_all(COMPS, sigs, inv, CFG, NOW))
         self.assertGreater(res["nodejs"]["priority"], res["php"]["priority"])
+
+
+def churn(cid, windows, per_window=6, **kw):
+    """per_window CVSS-9 signals in each 30-day window, newest window first."""
+    return [sig(cid, days_ago=w * 30 + k * 5 + 1, cve=f"CVE-{cid}-{w}-{k}", **kw)
+            for w in range(windows) for k in range(per_window)]
+
+
+class ActivityBaseline(unittest.TestCase):
+    """A: 6 CVSS-9 signals every 30 days for 180 days (chronic churn).
+    B: the same 6 signals, only in the last 30 days (a burst)."""
+    A = churn("imagemagick", windows=6)
+    B = churn("imagemagick", windows=1)
+
+    def activity(self, signals, **kw):
+        return by_id(score_all(COMPS, signals, {}, CFG, NOW, **kw))["imagemagick"]
+
+    def test_chronic_churn_is_subtracted(self):
+        a = self.activity(self.A, history_days=180)
+        b = self.activity(self.B, history_days=180)
+        self.assertTrue(a["baseline_ready"])
+        self.assertGreater(b["points"]["activity"], a["points"]["activity"] * 3)
+        self.assertAlmostEqual(a["points"]["activity"], 0, places=0)
+        self.assertLess(a["activity_ratio"], 1.0)
+        self.assertGreater(a["activity_expected"], 0)
+
+    def test_cold_start_uses_raw_activity(self):
+        a = self.activity(self.A)
+        b = self.activity(self.B)
+        self.assertFalse(a["baseline_ready"])
+        self.assertEqual(a["points"]["activity"], b["points"]["activity"])
+        self.assertEqual(self.activity(self.A, history_days=149)["baseline_ready"], False)
+        self.assertEqual(self.activity(self.A, history_days=150)["baseline_ready"], True)
+
+    def test_bonuses_are_never_baseline_subtracted(self):
+        chronic = self.activity(self.A, history_days=180)
+        urgent = [dict(s) for s in self.A]
+        urgent[0]["emergency"] = True
+        self.assertGreater(self.activity(urgent, history_days=180)["points"]["activity"],
+                           chronic["points"]["activity"])
+
+    def test_ratio_null_without_baseline_mass(self):
+        r = self.activity([sig("imagemagick")], history_days=180)
+        self.assertIsNone(r["activity_ratio"])
+        self.assertEqual(r["activity_expected"], 0)
+        self.assertGreater(r["activity_recent"], 0)
+
+    def test_config_guard(self):
+        bad = copy.deepcopy(CFG)
+        bad["max_signal_age_days"] = bad["activity_baseline"]["baseline_window_days"] - 1
+        with self.assertRaises(ValueError):
+            validate_config(bad)
+        with self.assertRaises(ValueError):
+            score_all(COMPS, [], {}, bad, NOW)
+        validate_config(CFG)
 
 
 class Matching(unittest.TestCase):
@@ -250,6 +305,24 @@ class Pipeline(unittest.TestCase):
             self.assertEqual(rows[("fortios", "php")]["example_url"], "https://x/a")
             apply_findings(ctx, {"d0": row}, [finding])
             self.assertEqual(dict(ctx.db.embed_candidates()[0])["mentions"], 2)
+
+    def test_history_days_from_kv(self):
+        from app.pipeline import history_days
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            self.assertIsNone(history_days(db))
+            db.set_kv("nvd_history_from", (datetime.now(timezone.utc) - timedelta(days=200)).isoformat())
+            self.assertEqual(history_days(db), 200)
+            db.set_kv("nvd_history_from", (datetime.now(timezone.utc) - timedelta(days=10)).date().isoformat())
+            self.assertIn(history_days(db), (10, 11))   # date-only value is accepted
+
+    def test_nvd_window_guard(self):
+        import asyncio
+        from app.collectors.nvd import MAX_WINDOW_DAYS, fetch_nvd_window
+        end = datetime.now(timezone.utc)
+        with self.assertRaises(ValueError):
+            asyncio.run(fetch_nvd_window(None, None, None, {}, None,
+                                         end - timedelta(days=MAX_WINDOW_DAYS + 1), end))
 
 
 class Backtest(unittest.TestCase):
