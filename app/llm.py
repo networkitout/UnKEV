@@ -239,7 +239,9 @@ async def brief(client, settings, rows: list[dict]) -> tuple[str, int, int]:
             for r in rows[:12]]
     resp = await call_claude(client, settings, model=settings.brief_model, system=BRIEF_SYSTEM,
                              messages=[{"role": "user", "content": json.dumps(slim, indent=1)}],
-                             max_tokens=2000)   # 250 words plus adaptive-thinking headroom
+                             max_tokens=6000)   # 250 words plus adaptive-thinking headroom
     text = "".join(b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text").strip()
+    if resp.get("stop_reason") == "max_tokens":
+        text += "\n\n[brief truncated: output token limit reached]"
     tin, tout = usage_of(resp)
     return _CTRL.sub(" ", text), tin, tout
