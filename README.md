@@ -9,11 +9,15 @@ The ranking is deterministic and reproducible. Claude extracts facts and writes 
  NVD 2.0 ──────┤ deterministic map (CPE, then description aliases)
  RSS/Atom ─────┤ local prefilter ─► Claude: record_findings (forced tool, enums)
  EPSS ─────────┘                         │ validated, off-vocab dropped
+                                         ├─► embed_candidates ─► "Proposed dependency edges"
+                                         │                        (a human edits components.yaml)
                                          ▼
-                                     signals ──► scoring.py ◄── inventory ◄── inventory API / CMDB
-                                                     │                    ◄── appliances.yaml
-                                                     ▼
-                                       snapshots ─► dashboard / JSON / CSV
+   "Exploited in the last 30 days" ◄── signals ──► scoring.py ◄── inventory ◄── inventory API / CMDB
+   (KEV + confirmed, catalog or not)      ▲           ▲   ▲                 ◄── appliances.yaml (exposure)
+                                          │           │   └── components.yaml embeds (inherited term)
+      scripts/backfill_nvd.py ────────────┘           └────── nvd_history_from (activity baseline ready?)
+                                                      ▼
+                                        snapshots ─► dashboard / JSON / CSV
                                                      └──► Claude: daily brief (escaped text)
 ```
 
@@ -69,11 +73,35 @@ Runtime components such as PHP and Node need per-host *application* inventory, f
 
 `likelihood` (0-100) is the sum of five weighted terms:
 
-- **prior:** structural risk from `components.yaml`, made up of memory safety, pre-auth parsing, install base, embedding and legacy tail. These are analyst estimates; tune them with the backtest.
-- **activity:** recent CVEs on the component, weighted by severity, emergency release, public PoC and broken embargo, with a 21-day half-life.
-- **exploit:** the maximum of KEV, confirmed or attempted exploitation, and EPSS, with a 45-day half-life.
-- **spillover:** the predictive term. When an attack surface (for example `ip-canonicalization`) breaks in one component, every other component sharing that surface gets a decayed bump. Half-life is 30 days.
-- **inherited:** the dependency term. When a component breaks, every product whose catalog entry says it `embeds` that component gets a decayed bump, scaled by the product's `vendor_lag` prior and down-weighted while the edge is unconfirmed. Half-life is 45 days. Exploitation is never inherited: exploitability inside the host product often differs.
+| term | weight | what it measures |
+|---|---|---|
+| prior | 0.20 | structural risk from `components.yaml`: memory safety, pre-auth parsing, install base, embedding, legacy tail. Analyst estimates; tune with the backtest. |
+| activity | 0.25 | CVEs on the component in the last 30 days, weighted by severity, **relative to its own baseline rate** (below). Emergency release, public PoC and broken embargo add bonuses that are never baseline-subtracted. 21-day half-life. |
+| spillover | 0.15 | the surface term. When an attack surface (for example `ip-canonicalization`) breaks in one component, every other component sharing that surface gets a decayed bump. 30-day half-life. |
+| inherited | 0.15 | the dependency term. When a component breaks, every product whose catalog entry `embeds` it gets a decayed bump, scaled by the product's `vendor_lag` prior and down-weighted while the edge is unconfirmed. 45-day half-life. Exploitation is never inherited: exploitability inside the host product often differs. |
+| exploit | 0.25 | the maximum of KEV, confirmed or attempted exploitation, and EPSS. 45-day half-life. |
+
+### Baseline-relative activity
+
+Chronic churn (ImageMagick, libxml2 shipping CVSS 9.x memory bugs every month) used to pin those components near the top forever. Activity now reacts to a change in rate, not the level:
+
+```
+recent    = Σ severity × confidence × decay        over signals aged < 30 days
+bonuses   = Σ (emergency + PoC + embargo) × conf × decay   over the same signals
+baseline  = Σ severity × confidence                over signals aged 30..180 days, undecayed
+expected  = baseline × 30 / (180 − 30)
+activity  = saturate( max(0, recent − β × expected) + bonuses )
+```
+
+β is 1.0 once the signal store covers at least `min_history_days` (150) of NVD history, measured from the kv `nvd_history_from`. Until then β is forced to 0 (cold start), the detail panel shows "baseline warming up", and activity is the raw recent mass. The first NVD run sets `nvd_history_from` to its own start; to warm up immediately:
+
+```bash
+python -m scripts.backfill_nvd --days 180   # walks back in ≤119-day windows on publication date, idempotent
+```
+
+Mind the Claude budget: backfilled CVEs at or above `llm_tag_min_cvss` are queued for surface tagging like any other. Fresh items are processed first and the daily cap still applies.
+
+The detail panel shows "N.N× its usual CVE rate" when recent/expected is at least 1.5. Every result also carries `activity_recent`, `activity_expected`, `activity_ratio` and `baseline_ready`.
 
 ### Two kinds of `embeds`
 
@@ -107,7 +135,7 @@ python -m scripts.backtest kev.json --start 2025-01 --end 2026-10 --k 10
 
 The backtest replays KEV month by month. It compares the model against three baselines: install base alone, prior alone, and recency (KEV count in the prior 90 days). Recency is the baseline to beat; if the model doesn't, say so.
 
-**Limit:** a KEV replay can't test spillover, because KEV has no surface tags. That needs the extraction history this app accumulates.
+**Known limits.** A KEV replay exercises prior, activity and exploit only. KEV has no attack-surface tags and no dependency labels, so spillover and inherited are not tested; that needs the extraction history this app accumulates. The replay also feeds signals with no history, so baseline subtraction runs in cold-start mode (β = 0). Don't enable it there, and don't tune weights to win the comparison.
 
 ## Tests
 
@@ -120,7 +148,8 @@ python -m unittest discover -s tests -t . -v
 These came from memory and were not verified against live endpoints in this build:
 
 - feed URLs
-- NVD date format, window limit and rate limits
+- NVD date format, `pub`/`lastMod` date parameter names, 120-day window limit and rate limits
+- CPE product names on the components added in 0.2 (`f5-bigip`, `cisco-expressway`, `symantec-sepm`, `cb-app-control`)
 - EPSS batch limits
 - Claude model IDs
 - inventory routes and fields (placeholders in `config/inventory.yaml`)
@@ -129,6 +158,6 @@ These came from memory and were not verified against live endpoints in this buil
 
 - Postgres/Timescale for snapshots and Redis Streams for jobs once this outgrows one box.
 - Add a CWE-to-surface mapping so KEV and NVD signals carry surfaces without Claude.
-- Add a spillover backtest once around 90 days of extractions exist.
-- Add catalog growth from the "not in the catalog" list.
+- Add a spillover and inherited backtest once around 90 days of extractions exist.
+- Add catalog growth from the "not in the catalog" and "Proposed dependency edges" lists.
 - Add GitHub Security Advisories and OSV as structured sources.

@@ -12,9 +12,13 @@ If the model doesn't beat `recency`, the extra machinery isn't earning its
 keep on this data, and you should say so before trusting the dashboard.
 
 Scope limits (be honest about these when you share results):
-  - Exercises prior + activity + exploit only. KEV has no attack-surface tags,
-    so spillover (the predictive term) is NOT tested here. Testing it needs a
-    labeled history of Claude extractions, which accumulates as the app runs.
+  - Exercises prior + activity + exploit only. KEV has no attack-surface tags
+    and no dependency labels, so spillover and inherited are NOT tested here.
+    Testing them needs a labeled history of Claude extractions, which
+    accumulates as the app runs.
+  - Signals carry no history, so baseline subtraction runs in cold-start mode
+    (beta = 0). Don't pass history_days to enable it; the replay has no
+    baseline window to subtract against.
   - Exposure is ignored; this tests the global forecast, not your estate's priority.
   - KEV listing is a lagging, US-government-curated label of exploitation,
     not ground truth for "a vuln appeared".
@@ -128,7 +132,8 @@ def main():
         hk = "n/a" if m["hit_at_k"] is None else f"{m['hit_at_k']:.3f}"
         mr = "n/a" if m["mrr"] is None else f"{m['mrr']:.3f}"
         print(f"{n:14} {hk:>7} {mr:>7}")
-    print("\nSpillover is not exercised by a KEV replay. See module docstring.")
+    print("\nSpillover and inherited are not exercised by a KEV replay; activity ran in cold-start mode. "
+          "See module docstring.")
 
 
 if __name__ == "__main__":
