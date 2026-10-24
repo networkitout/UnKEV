@@ -46,7 +46,7 @@ def get_settings() -> Settings:
         # extraction; ones that reject forced tool_choice fall back to auto (see llm.py).
         extract_model=e("UNKEV_EXTRACT_MODEL", "claude-opus-5-5"),
         brief_model=e("UNKEV_BRIEF_MODEL", "claude-opus-5-5"),
-        llm_daily_token_budget=int(e("UNKEV_LLM_DAILY_TOKENS", "400000")),
+        llm_daily_token_budget=int(e("UNKEV_LLM_DAILY_TOKENS", "400000") or 0),   # 0 = no cap
         llm_batch_size=int(e("UNKEV_LLM_BATCH", "8")),
         nvd_api_key=e("NVD_API_KEY"),
         dashboard_user=e("UNKEV_USER", "operator"),

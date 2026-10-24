@@ -140,7 +140,7 @@ Intel is untrusted input:
 - The brief is escaped before marker spans are added.
 - CSP is `script-src 'self'`.
 - Run triggers require `HX-Request` (CSRF under Basic auth).
-- A daily token budget caps spend.
+- A daily token budget caps spend (`UNKEV_LLM_DAILY_TOKENS`, default 400k; `0` disables it). Fresh intel is processed before backlog, so a cap delays old items, not new ones.
 
 Tests in `tests/test_core.py` cover the wrapper escape, schema stripping and XSS cases.
 

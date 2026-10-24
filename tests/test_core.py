@@ -460,6 +460,18 @@ class Pipeline(unittest.TestCase):
             self.assertEqual(rows["CVE-2026-0002"]["title"], "Plex Media Server")
             self.assertEqual(rows["CVE-2026-0004"]["component"], "php")
 
+    def test_token_budget_zero_means_no_cap(self):
+        from app.pipeline import budget_exhausted
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            db.add_usage(300, 200)
+            capped = types.SimpleNamespace(db=db, settings=types.SimpleNamespace(llm_daily_token_budget=500))
+            loose = types.SimpleNamespace(db=db, settings=types.SimpleNamespace(llm_daily_token_budget=501))
+            off = types.SimpleNamespace(db=db, settings=types.SimpleNamespace(llm_daily_token_budget=0))
+            self.assertTrue(budget_exhausted(capped))
+            self.assertFalse(budget_exhausted(loose))
+            self.assertFalse(budget_exhausted(off))
+
     def test_history_days_from_kv(self):
         from app.pipeline import history_days
         with tempfile.TemporaryDirectory() as d:

@@ -111,6 +111,12 @@ def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
     return stats
 
 
+def budget_exhausted(ctx: Ctx) -> bool:
+    """True when today's Claude usage has hit the daily cap. A cap of 0 means no cap."""
+    cap = ctx.settings.llm_daily_token_budget
+    return bool(cap) and ctx.db.usage_today() >= cap
+
+
 async def job_extract(ctx: Ctx, max_batches: int = 10):
     s = ctx.settings
     if not s.anthropic_api_key:
@@ -118,7 +124,7 @@ async def job_extract(ctx: Ctx, max_batches: int = 10):
     total = {"batches": 0, "relevant": 0, "signals": 0, "tagged": 0, "edges": 0, "tokens": 0}
     async with ctx.client() as c:
         for _ in range(max_batches):
-            if ctx.db.usage_today() >= s.llm_daily_token_budget:
+            if budget_exhausted(ctx):
                 total["stopped"] = "daily token budget reached"
                 break
             rows = ctx.db.pending_intel(s.llm_batch_size)
@@ -187,7 +193,7 @@ async def job_brief(ctx: Ctx):
     s = ctx.settings
     if not s.anthropic_api_key:
         return {"skipped": "ANTHROPIC_API_KEY not set"}
-    if ctx.db.usage_today() >= s.llm_daily_token_budget:
+    if budget_exhausted(ctx):
         return {"skipped": "daily token budget reached"}
     _, rows = ctx.db.latest_snapshot()
     if not rows:
