@@ -79,8 +79,9 @@
     <div class="rec-grid">
       {% for name, p in record.profiles.items() %}
       <div class="rec">
-        <div class="k">{% if name == 'exploited' %}Exploited in the wild{% else %}Serious new flaws{% endif %}
+        <div class="k">{% if name == 'exploited' %}Exploited in the wild{% else %}New critical flaws{% endif %}
           <span class="muted">{{ p.events }} events, {{ record.n }} judged days</span></div>
+        <div class="rec-what">{% if name == 'exploited' %}KEV listings and confirmed exploitation. This is what the forecast is built to anticipate.{% else %}Any new CVE scored 9.0 or higher. Recent CVE count predicts this well by construction; the forecast deliberately discounts chronic churn.{% endif %}</div>
         <div class="rec-main">
           <div class="big">{{ p.model }}</div>
           <div class="txt">of events landed in our top {{ record.k }}<br>

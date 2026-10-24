@@ -129,6 +129,7 @@ main.wrap { display: grid; gap: 22px; padding-top: 24px; padding-bottom: 56px; }
 .rec { display: grid; gap: 10px; padding: 4px 0; }
 .rec > .k, .rec .cohort .k { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 600; }
 .rec > .k .muted { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 8px; }
+.rec-what { font-size: 13.5px; color: var(--muted); margin-top: -4px; }
 .rec-main { display: flex; align-items: center; gap: 16px; }
 .rec-main .big { font-size: 44px; font-weight: 750; line-height: 1; letter-spacing: -.02em; }
 .rec-main .txt { font-size: 15px; line-height: 1.4; }
