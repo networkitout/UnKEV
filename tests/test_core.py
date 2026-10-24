@@ -385,6 +385,18 @@ class Inventory(unittest.TestCase):
         sw = [{"host": "a", "name": "php"}, {"host": "a", "name": "php-cli"}, {"host": "b", "name": "php"}]
         self.assertEqual(aggregate(sw, None, self.m, COMPS, [])["php"]["hosts"], 2)
 
+    def test_mode_none_is_all_unknown_and_quiet(self):
+        import asyncio
+        from app.inventory import sync_inventory
+        inv, stats = asyncio.run(sync_inventory(None, {"mode": "none", "sources": {"software": {"path": "/x"}}},
+                                                self.m, COMPS, []))
+        self.assertEqual(stats["mode"], "none")
+        self.assertEqual(stats["errors"], {})
+        self.assertTrue(all(v["status"] == "unknown" and v["hosts"] == 0 for v in inv.values()))
+        inv, _ = asyncio.run(sync_inventory(None, {"mode": "none"}, self.m, COMPS,
+                                            [{"name": "edge", "component": "netscaler", "count": 2}]))
+        self.assertEqual(inv["netscaler"]["status"], "declared")   # appliances.yaml still counts
+
     def test_appliance_merge(self):
         inv = aggregate([], None, self.m, COMPS, [])
         inv = merge_appliances(inv, [{"name": "adc", "component": "netscaler", "count": 2, "internet_facing": 2,

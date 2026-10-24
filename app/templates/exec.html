@@ -11,26 +11,26 @@
 
 <main class="wrap">
   <section class="kpis" aria-label="Posture">
-    <div class="kpi {{ 'alert' if kpis.high }}">
+    <a class="kpi {{ 'alert' if kpis.high }}" href="#top">
       <div class="n">{{ kpis.high }}</div>
       <div class="l">High-priority components</div>
       <div class="s">{% if kpis.crit %}{{ kpis.crit }} critical{% else %}none critical{% endif %}</div>
-    </div>
-    <div class="kpi">
+    </a>
+    <a class="kpi" href="#exploited">
       <div class="n">{{ kpis.exploited }}</div>
       <div class="l">Exploited in the wild, last 30 days</div>
       <div class="s">{% if kpis.exploited_us %}<b class="warn">{{ kpis.exploited_us }} touch our estate</b>{% else %}none known to touch our estate{% endif %}</div>
-    </div>
-    <div class="kpi">
+    </a>
+    <a class="kpi" href="#movers">
       <div class="n">{{ kpis.rising }}</div>
       <div class="l">Rising this week</div>
       <div class="s">moved up more than 5 points</div>
-    </div>
-    <div class="kpi {{ 'dim' if not kpis.blind }}">
+    </a>
+    <a class="kpi {{ 'dim' if not kpis.blind }}" href="#blind">
       <div class="n">{{ kpis.blind }}<span class="of">of {{ kpis.watch }}</span></div>
       <div class="l">Blind spots in the top {{ kpis.watch }}</div>
       <div class="s">we can't see whether we run them</div>
-    </div>
+    </a>
   </section>
 
   <section class="sec" aria-labelledby="sum-h">
@@ -48,7 +48,7 @@
     {% else %}<p class="empty">No summary yet.</p>{% endif %}
   </section>
 
-  <section class="sec" aria-labelledby="top-h">
+  <section class="sec" id="top" aria-labelledby="top-h">
     <header>
       <h2 id="top-h">Top risks</h2>
       <p>What is most likely to hurt us soon, and why. Ranked by how likely a component is to break, scaled by how much of it we run.</p>
@@ -80,7 +80,7 @@
     {% else %}<p class="empty">No scores yet.</p>{% endif %}
   </section>
 
-  <section class="sec" aria-labelledby="ex-h">
+  <section class="sec" id="exploited" aria-labelledby="ex-h">
     <header>
       <h2 id="ex-h">Actively exploited</h2>
       <p>Vulnerabilities confirmed exploited in the last 30 days, from CISA KEV and reporting, and whether they touch what we run.</p>
@@ -104,7 +104,7 @@
   </section>
 
   <div class="pair">
-    <section class="sec" aria-labelledby="bl-h">
+    <section class="sec" id="blind" aria-labelledby="bl-h">
       <header>
         <h2 id="bl-h">Blind spots</h2>
         <p>High-ranking components we can't see in inventory. Unknown is a gap, not a clean result.</p>
@@ -119,7 +119,7 @@
       {% else %}<p class="empty">Every top-{{ kpis.watch }} component is visible in inventory.</p>{% endif %}
     </section>
 
-    <section class="sec" aria-labelledby="mv-h">
+    <section class="sec" id="movers" aria-labelledby="mv-h">
       <header>
         <h2 id="mv-h">Movers</h2>
         <p>Largest changes in priority since this time last week.</p>

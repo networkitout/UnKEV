@@ -146,12 +146,13 @@ async def sync_inventory(client, cfg: dict, matcher, components: dict, appliance
     sources = cfg.get("sources") or {}
     raw: dict[str, list[dict] | None] = {"software": None, "hosts": None}
     errors = {}
-    if cfg.get("mode") == "fixture":
+    mode = cfg.get("mode") or "none"
+    if mode == "fixture":
         data = json.loads((ROOT / cfg["fixture_path"]).read_text())
         for k in raw:
             if k in data and k in sources:
                 raw[k] = normalize(data[k], sources[k]["fields"])
-    else:
+    elif mode == "api":
         for k in raw:
             if k not in sources:
                 continue
@@ -159,9 +160,10 @@ async def sync_inventory(client, cfg: dict, matcher, components: dict, appliance
                 raw[k] = normalize(await _fetch_source(client, cfg, sources[k]), sources[k]["fields"])
             except Exception as e:
                 errors[k] = f"{type(e).__name__}: {str(e)[:200]}"
+    # mode "none": nothing fetched, so aggregate() marks every component unknown.
     inv = aggregate(raw["software"], raw["hosts"], matcher, components, cfg.get("critical_values") or [])
     inv = merge_appliances(inv, appliances, cfg.get("critical_values") or [])
-    stats = {"software_records": len(raw["software"] or []), "host_records": len(raw["hosts"] or []),
+    stats = {"mode": mode, "software_records": len(raw["software"] or []), "host_records": len(raw["hosts"] or []),
              "known": sum(v["status"] == "known" for v in inv.values()),
              "unknown": sum(v["status"] == "unknown" for v in inv.values()), "errors": errors}
     return inv, stats

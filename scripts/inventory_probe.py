@@ -46,9 +46,14 @@ def main():
     cfg = load_yaml("inventory.yaml")
     components = load_yaml("components.yaml")
     matcher = Matcher(components)
-    fixture = a.fixture or cfg.get("mode") == "fixture"
+    mode = "fixture" if a.fixture else (cfg.get("mode") or "none")
+    if mode == "none":
+        print("mode: none. No inventory source is configured, so every component reads \"unknown\".\n"
+              "Set mode: api and the routes in config/inventory.yaml, then re-run. Or --fixture for demo data.")
+        return
+    fixture = mode == "fixture"
     data = json.loads((ROOT / cfg["fixture_path"]).read_text()) if fixture else None
-    print(f"mode: {'fixture' if fixture else 'api'}\n")
+    print(f"mode: {mode}\n")
 
     for name, src in (cfg.get("sources") or {}).items():
         print(f"[{name}]")

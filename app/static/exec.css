@@ -44,7 +44,13 @@ main.wrap { display: grid; gap: 22px; padding-top: 24px; padding-bottom: 56px; }
 
 /* posture tiles */
 .kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.kpi { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px 18px; }
+.kpi { display: block; background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 20px 22px 18px;
+       color: inherit; position: relative; transition: border-color .15s, box-shadow .15s, transform .15s; }
+.kpi:hover, .kpi:focus-visible { text-decoration: none; border-color: #c5ced9; box-shadow: 0 6px 18px rgba(24,34,48,.08); transform: translateY(-1px); }
+.kpi::after { content: "↓"; position: absolute; top: 16px; right: 18px; color: var(--faint); font-size: 15px; opacity: 0; transition: opacity .15s; }
+.kpi:hover::after, .kpi:focus-visible::after { opacity: 1; }
+html { scroll-behavior: smooth; }
+.sec[id] { scroll-margin-top: 16px; }
 .kpi .n { font-size: 44px; font-weight: 750; line-height: 1; letter-spacing: -.02em; }
 .kpi .n .of { font-size: 16px; font-weight: 500; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
 .kpi .l { margin-top: 8px; font-weight: 600; }

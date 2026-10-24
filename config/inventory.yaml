@@ -5,10 +5,13 @@
 #   python -m scripts.inventory_probe
 # which fetches one page and shows how each record maps.
 #
-# mode: fixture  -> read fixtures/inventory.json (no network)
-# mode: api      -> call the inventory API
+# mode: none     -> no inventory source yet. Every component reads "unknown",
+#                   a visibility gap, never "absent". Nothing fake is shown.
+# mode: fixture  -> read fixtures/inventory.json: synthetic demo hosts.
+#                   scripts/seed_demo forces this; don't ship it live.
+# mode: api      -> call the inventory API configured below.
 
-mode: fixture
+mode: none
 fixture_path: fixtures/inventory.json
 
 base_url: https://inventory.internal.example
