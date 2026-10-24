@@ -33,54 +33,7 @@
     </a>
   </section>
 
-  <section class="sec" aria-labelledby="sum-h">
-    <header>
-      <h2 id="sum-h">Today's summary</h2>
-      <p>{% if brief %}Written by Claude from the scored data, {{ brief_ago }}. Tags show where each claim comes from.{% else %}The summary is written after the first scoring run once a Claude key is configured.{% endif %}</p>
-    </header>
-    {% if brief %}
-      <div class="prose">
-        {% for kind, body in brief.body|brief_blocks %}
-          {% if kind == 'ul' %}<ul>{% for li in body %}<li>{{ li }}</li>{% endfor %}</ul>
-          {% else %}<p>{{ body }}</p>{% endif %}
-        {% endfor %}
-      </div>
-    {% else %}<p class="empty">No summary yet.</p>{% endif %}
-  </section>
-
-  <section class="sec" id="top" aria-labelledby="top-h">
-    <header>
-      <h2 id="top-h">Top risks</h2>
-      <p>What is most likely to hurt us soon, and why. Ranked by how likely a component is to break, scaled by how much of it we run.</p>
-    </header>
-    {% if top %}
-    <ol class="risks">
-      {% for r in top %}
-      <li class="risk {{ r.band }}">
-        <div class="rank">{{ r.rank }}</div>
-        <div class="score"><div class="n">{{ "%.0f"|format(r.priority) }}</div><div class="w">{{ r.band_word }}</div></div>
-        <div class="what">
-          <div class="name"><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a></div>
-          <div class="why">{{ r.why }}</div>
-        </div>
-        <div class="exp exp-{{ r.exposure_status }}">
-          <div class="k">Our exposure</div>
-          <div class="v">{{ r.exposure_long }}</div>
-        </div>
-        <div class="trend">
-          {% if r.delta is none %}<span class="new">new</span>
-          {% elif r.delta > 0.5 %}<span class="up">▲ {{ r.delta }}</span>
-          {% elif r.delta < -0.5 %}<span class="down">▼ {{ r.delta|abs }}</span>
-          {% else %}<span class="flat">—</span>{% endif %}
-          <div class="k">vs last week</div>
-        </div>
-      </li>
-      {% endfor %}
-    </ol>
-    {% else %}<p class="empty">No scores yet.</p>{% endif %}
-  </section>
-
-  <section class="sec" id="spread" aria-labelledby="sp-h">
+  <section class="sec hero" id="spread" aria-labelledby="sp-h">
     <header>
       <h2 id="sp-h">Where trouble could spread next</h2>
       <p>Attack surfaces that broke somewhere in the last 30 days, and which of our components share them. When one component breaks at a surface, others sharing it tend to follow. Brighter is hotter; an outlined cell has already been hit.</p>
@@ -114,6 +67,63 @@
     </div>
     {% else %}<p class="empty">No surface-tagged activity in the last 30 days. Surfaces come from Claude's extraction of news and high-severity CVEs.</p>{% endif %}
   </section>
+
+  <details class="sec fold" id="summary">
+    <summary>
+      <div>
+        <h2>Today's summary</h2>
+        <p>{% if brief %}Written by Claude from the scored data, {{ brief_ago }}. Tags show where each claim comes from.{% else %}Written after the first scoring run once a Claude key is configured.{% endif %}</p>
+      </div>
+      <span class="toggle" aria-hidden="true"></span>
+    </summary>
+    <div class="fold-body">
+      {% if brief %}
+        <div class="prose">
+          {% for kind, body in brief.body|brief_blocks %}
+            {% if kind == 'ul' %}<ul>{% for li in body %}<li>{{ li }}</li>{% endfor %}</ul>
+            {% else %}<p>{{ body }}</p>{% endif %}
+          {% endfor %}
+        </div>
+      {% else %}<p class="empty">No summary yet.</p>{% endif %}
+    </div>
+  </details>
+
+  <details class="sec fold" id="top">
+    <summary>
+      <div>
+        <h2>Top risks</h2>
+        <p>What is most likely to hurt us soon, and why. Ranked by how likely a component is to break, scaled by how much of it we run.</p>
+      </div>
+      <span class="toggle" aria-hidden="true"></span>
+    </summary>
+    <div class="fold-body">
+      {% if top %}
+      <ol class="risks">
+        {% for r in top %}
+        <li class="risk {{ r.band }}">
+          <div class="rank">{{ r.rank }}</div>
+          <div class="score"><div class="n">{{ "%.0f"|format(r.priority) }}</div><div class="w">{{ r.band_word }}</div></div>
+          <div class="what">
+            <div class="name"><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a></div>
+            <div class="why">{{ r.why }}</div>
+          </div>
+          <div class="exp exp-{{ r.exposure_status }}">
+            <div class="k">Our exposure</div>
+            <div class="v">{{ r.exposure_long }}</div>
+          </div>
+          <div class="trend">
+            {% if r.delta is none %}<span class="new">new</span>
+            {% elif r.delta > 0.5 %}<span class="up">▲ {{ r.delta }}</span>
+            {% elif r.delta < -0.5 %}<span class="down">▼ {{ r.delta|abs }}</span>
+            {% else %}<span class="flat">—</span>{% endif %}
+            <div class="k">vs last week</div>
+          </div>
+        </li>
+        {% endfor %}
+      </ol>
+      {% else %}<p class="empty">No scores yet.</p>{% endif %}
+    </div>
+  </details>
 
   <section class="sec" id="exploited" aria-labelledby="ex-h">
     <header>
@@ -179,4 +189,5 @@
     <a href="/analyst">Analyst view →</a>
   </footer>
 </main>
+<script src="{{ static_prefix|default('/static') }}/exec.js" defer></script>
 {% endblock %}
