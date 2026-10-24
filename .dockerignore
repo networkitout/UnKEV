@@ -1,0 +1,17 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+.env.example
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+preview.html
+kev.json
+docs
+tests
+UNKEV-0.2-TASK.md
+CHANGELOG.md
+AGENTS.md
