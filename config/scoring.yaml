@@ -23,9 +23,11 @@ inherited:
 
 # Activity is baseline-relative: it reacts to a change in a component's CVE
 # rate, not the level, so chronic churn (ImageMagick, libxml2) stops pinning
-# the top. expected = baseline mass * recent_window / (baseline_window - recent_window);
-# activity = saturate(max(0, recent - beta * expected) + bonuses). Bonuses are
-# never baseline-subtracted: an emergency release is anomalous by definition.
+# the top. expected = baseline mass * recent_window / (baseline_window - recent_window),
+# decayed by the window's mean decay so it sits on the same footing as the
+# scored recent mass; activity = saturate(max(0, recent - beta * expected) + bonuses).
+# beta 1.0 therefore cancels exactly the usual rate. Bonuses are never
+# baseline-subtracted: an emergency release is anomalous by definition.
 activity_baseline:
   recent_window_days: 30
   baseline_window_days: 180      # baseline = signals aged recent_window..baseline_window

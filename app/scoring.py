@@ -28,6 +28,12 @@ def saturate(x: float) -> float:
     return 1.0 - math.exp(-max(x, 0.0))
 
 
+def mean_decay(window_days: float, half_life: float) -> float:
+    """Average of decay() across a window for a rate that is uniform over it.
+    Puts an undecayed expected mass on the same footing as a decayed recent one."""
+    return half_life / (window_days * math.log(2)) * (1 - 0.5 ** (window_days / half_life))
+
+
 def sev_weight(cvss: float | None) -> float:
     if cvss is None:
         return 0.5
@@ -103,6 +109,7 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
     W, B = ab["recent_window_days"], ab["baseline_window_days"]
     baseline_ready = history_days is not None and history_days >= ab["min_history_days"]
     beta = float(ab["beta"]) if baseline_ready else 0.0
+    exp_decay = mean_decay(W, hl["activity"])   # so beta 1.0 cancels exactly the usual rate
 
     recent_base = {cid: 0.0 for cid in components}    # severity mass, last W days, decayed (scored)
     recent_bonus = {cid: 0.0 for cid in components}   # emergency/PoC/embargo mass, last W days, decayed
@@ -200,7 +207,7 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
         expected = base_mass[cid] * W / (B - W)
         terms = {
             "prior": prior_score(c.get("priors")),
-            "activity": saturate(max(0.0, recent_base[cid] - beta * expected) + recent_bonus[cid]),
+            "activity": saturate(max(0.0, recent_base[cid] - beta * expected * exp_decay) + recent_bonus[cid]),
             "spillover": saturate(spill[cid]),
             "inherited": saturate(inherited[cid]),
             "exploit": min(exploit[cid], 1.0),

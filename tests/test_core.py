@@ -13,7 +13,7 @@ from app.db import DB
 from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
 from app.matching import Matcher
-from app.scoring import decay, exposure_score, prior_score, saturate, score_all, validate_config
+from app.scoring import decay, exposure_score, mean_decay, prior_score, saturate, score_all, validate_config
 from app.views import brief_html
 
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
@@ -127,8 +127,9 @@ class Scoring(unittest.TestCase):
 
 
 def churn(cid, windows, per_window=6, tag="", **kw):
-    """per_window CVSS-9 signals in each 30-day window, newest window first."""
-    return [sig(cid, days_ago=w * 30 + k * 5 + 1, cve=f"CVE-{cid}{tag}-{w}-{k}", **kw)
+    """per_window CVSS-9 signals spread uniformly over each 30-day window, newest first."""
+    step = 30 / per_window
+    return [sig(cid, days_ago=w * 30 + (k + 0.5) * step, cve=f"CVE-{cid}{tag}-{w}-{k}", **kw)
             for w in range(windows) for k in range(per_window)]
 
 
@@ -141,13 +142,20 @@ class ActivityBaseline(unittest.TestCase):
     def activity(self, signals, **kw):
         return by_id(score_all(COMPS, signals, {}, CFG, NOW, **kw))["imagemagick"]
 
+    def test_mean_decay(self):
+        self.assertAlmostEqual(mean_decay(30, 21), 0.6346, places=3)
+        self.assertAlmostEqual(mean_decay(30, 1e9), 1.0, places=6)      # no decay: expected unchanged
+        self.assertAlmostEqual(mean_decay(21, 21), 0.7213, places=3)    # one half-life: (1/ln2)(1 - 1/2)
+
     def test_chronic_churn_is_subtracted(self):
         a = self.activity(self.A, history_days=180)
         b = self.activity(self.B, history_days=180)
         self.assertTrue(a["baseline_ready"])
         self.assertGreater(b["points"]["activity"], a["points"]["activity"] * 3)
-        self.assertAlmostEqual(a["points"]["activity"], 0, places=0)
+        self.assertAlmostEqual(a["points"]["activity"], 0, places=0)   # beta 1.0 cancels the usual rate exactly
         self.assertGreater(a["activity_expected"], 0)
+        slightly_up = self.A + churn("imagemagick", windows=1, per_window=1, tag="y")
+        self.assertGreater(self.activity(slightly_up, history_days=180)["points"]["activity"], 0)   # registers above 1.0x
 
     def test_ratio_is_a_true_rate_ratio(self):
         steady = self.activity(self.A, history_days=180)

@@ -101,10 +101,10 @@ recent    = Σ severity × confidence × decay        over signals aged < 30 day
 bonuses   = Σ (emergency + PoC + embargo) × conf × decay   over the same signals
 baseline  = Σ severity × confidence                over signals aged 30..180 days, undecayed
 expected  = baseline × 30 / (180 − 30)
-activity  = saturate( max(0, recent − β × expected) + bonuses )
+activity  = saturate( max(0, recent − β × expected × d̄) + bonuses )
 ```
 
-β is 1.0 once the signal store covers at least `min_history_days` (150) of NVD history, measured from the kv `nvd_history_from`. Until then β is forced to 0 (cold start), the detail panel shows "baseline warming up", and activity is the raw recent mass. The first NVD run sets `nvd_history_from` to its own start; to warm up immediately:
+`d̄` is the mean decay across the 30-day window (≈ 0.63 at a 21-day half-life), which puts the undecayed expected mass on the same footing as the decayed recent mass, so β = 1.0 cancels exactly the usual rate and activity registers from the first signal above it. β is 1.0 once the signal store covers at least `min_history_days` (150) of NVD history, measured from the kv `nvd_history_from`. Until then β is forced to 0 (cold start), the detail panel shows "baseline warming up", and activity is the raw recent mass. The first NVD run sets `nvd_history_from` to its own start; to warm up immediately:
 
 ```bash
 python -m scripts.backfill_nvd --days 180   # walks back in ≤119-day windows on publication date, idempotent
