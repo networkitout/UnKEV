@@ -6,7 +6,7 @@ import hashlib
 import json
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 SCHEMA = """
 PRAGMA journal_mode=WAL;
@@ -184,6 +184,43 @@ class DB:
     def set_epss(self, cve: str, epss: float, date: str) -> None:
         with self.conn() as c:
             c.execute("UPDATE signals SET epss=?, epss_date=? WHERE cve=?", (epss, date, cve))
+
+    # --- exploited now --------------------------------------------------
+    def exploited_recent(self, days: int = 30, limit: int = 20) -> list[dict]:
+        """KEV entries from the last N days, mapped to the catalog or not, plus
+        non-KEV signals reporting confirmed exploitation. One row per CVE,
+        KEV wins on conflict, newest first. component is None when nothing
+        in the catalog matched."""
+        cutoff = iso(utcnow() - timedelta(days=days))
+        with self.conn() as c:
+            kev = c.execute(
+                """SELECT i.published_at, i.title, i.url, s.cve, s.component_id
+                   FROM intel_items i LEFT JOIN signals s ON s.intel_id = i.id AND s.origin = 'kev'
+                   WHERE i.source = 'kev' AND i.published_at >= ? ORDER BY i.published_at DESC""",
+                (cutoff[:10],)).fetchall()
+            sigs = c.execute(
+                """SELECT intel_id, cve, component_id, observed_at, title, url, origin FROM signals
+                   WHERE origin != 'kev' AND (kev = 1 OR exploitation = 'confirmed') AND observed_at >= ?
+                   ORDER BY observed_at DESC""", (cutoff,)).fetchall()
+        rows: dict[str, dict] = {}
+        for r in kev:
+            # Unmapped KEV entries have no signal row; the collector's URL ends in the CVE.
+            cve = r["cve"] or (r["url"] or "").rsplit("/", 1)[-1]
+            row = rows.setdefault(cve, {"date": (r["published_at"] or "")[:10], "cve": cve, "url": r["url"],
+                                        "title": (r["title"] or "").split(": ", 1)[0],
+                                        "components": [], "origin": "kev"})
+            if r["component_id"] and r["component_id"] not in row["components"]:
+                row["components"].append(r["component_id"])
+        for r in sigs:
+            key = r["cve"] or f"{r['intel_id']}:{r['component_id']}"
+            row = rows.setdefault(key, {"date": r["observed_at"][:10], "cve": r["cve"] or None, "url": r["url"],
+                                        "title": r["title"] or "", "components": [], "origin": r["origin"]})
+            if r["component_id"] not in row["components"]:
+                row["components"].append(r["component_id"])
+        out = sorted(rows.values(), key=lambda x: x["date"], reverse=True)[:limit]
+        for x in out:
+            x["component"] = x["components"][0] if x["components"] else None
+        return out
 
     # --- unmapped -------------------------------------------------------
     def note_unmapped(self, name: str, source: str, url: str | None = None) -> None:

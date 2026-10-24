@@ -125,7 +125,11 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         except ValueError:
             r["detail_obj"] = None
     unknown = [r for r in rows if r["exposure_status"] == "unknown"]
+    exploited = ctx.db.exploited_recent(30)
+    for e in exploited:
+        e["component_names"] = [ctx.components.get(c, {}).get("name", c) for c in e["components"]]
     return {
+        "exploited": exploited,
         "ts": ts, "ts_ago": ago(ts), "rows": rows, "sel": sel,
         "brief": dict(brief) if brief else None,
         "brief_ago": ago(brief["ts"]) if brief else None,

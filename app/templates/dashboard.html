@@ -64,6 +64,23 @@
     <section class="panel" id="detail" aria-live="polite">
       {% if sel %}{% include "partials/detail.html" %}{% endif %}
     </section>
+
+    <section class="panel wide" aria-labelledby="ex-h">
+      <h2 id="ex-h">Exploited in the last 30 days
+        <span class="muted">CISA KEV and confirmed reports; includes products outside the catalog</span></h2>
+      {% if exploited %}
+      <div class="scroll-x"><table>
+        <thead><tr><th>Date</th><th>CVE</th><th>Vendor / product</th><th>Catalog component</th></tr></thead>
+        <tbody>{% for e in exploited %}
+          <tr><td class="muted">{{ e.date }}</td>
+            <td>{% if e.cve %}<a href="{{ e.url or 'https://nvd.nist.gov/vuln/detail/' ~ e.cve }}" rel="noopener noreferrer" target="_blank">{{ e.cve }}</a>
+                {% else %}<span class="muted">no CVE</span>{% endif %}</td>
+            <td class="driver" title="{{ e.title }}">{% if not e.cve and e.url %}<a href="{{ e.url }}" rel="noopener noreferrer" target="_blank">{{ e.title }}</a>{% else %}{{ e.title }}{% endif %}</td>
+            <td>{% if e.component_names %}{{ e.component_names|join(', ') }}{% else %}<span class="muted">not in catalog</span>{% endif %}</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+      {% else %}<p class="empty">Nothing in CISA KEV or confirmed-exploited in extracted intel over the last 30 days.</p>{% endif %}
+    </section>
   </div>
 
   <section class="panel" aria-labelledby="sp-h">

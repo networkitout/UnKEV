@@ -306,6 +306,36 @@ class Pipeline(unittest.TestCase):
             apply_findings(ctx, {"d0": row}, [finding])
             self.assertEqual(dict(ctx.db.embed_candidates()[0])["mentions"], 2)
 
+    def test_exploited_recent_includes_products_outside_catalog(self):
+        from app.collectors.kev import process_kev
+        today = datetime.now(timezone.utc)
+        d0, d40 = today.date().isoformat(), (today - timedelta(days=40)).date().isoformat()
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            process_kev({"vulnerabilities": [
+                {"cveID": "CVE-2026-0001", "vendorProject": "Microsoft", "product": "Windows",
+                 "vulnerabilityName": "MOTW bypass", "dateAdded": d0, "shortDescription": "x"},
+                {"cveID": "CVE-2026-0002", "vendorProject": "Plex", "product": "Media Server",
+                 "vulnerabilityName": "SSRF", "dateAdded": d0, "shortDescription": "x"},
+                {"cveID": "CVE-2026-0003", "vendorProject": "Citrix", "product": "NetScaler ADC",
+                 "vulnerabilityName": "old", "dateAdded": d40, "shortDescription": "x"},
+            ]}, db, Matcher(COMPS), 120)
+            # news says the Windows bug is really libarchive, and reports a separate PHP compromise
+            db.add_signal(intel_id="n1", component_id="libarchive", origin="llm", cve="CVE-2026-0001",
+                          exploitation="confirmed", observed_at=today.isoformat(), title="news", url="https://x/n1")
+            db.add_signal(intel_id="n2", component_id="php", origin="llm", cve="CVE-2026-0004",
+                          exploitation="confirmed", observed_at=today.isoformat(), title="php pwned", url="https://x/n2")
+            db.add_signal(intel_id="n3", component_id="nginx", origin="llm", cve="CVE-2026-0005",
+                          exploitation="attempts", observed_at=today.isoformat(), title="scanning only")
+            rows = {r["cve"]: r for r in db.exploited_recent(30)}
+            self.assertEqual(set(rows), {"CVE-2026-0001", "CVE-2026-0002", "CVE-2026-0004"})
+            self.assertEqual(rows["CVE-2026-0001"]["component"], "windows")
+            self.assertEqual(rows["CVE-2026-0001"]["components"], ["windows", "libarchive"])
+            self.assertEqual(rows["CVE-2026-0001"]["origin"], "kev")
+            self.assertIsNone(rows["CVE-2026-0002"]["component"])
+            self.assertEqual(rows["CVE-2026-0002"]["title"], "Plex Media Server")
+            self.assertEqual(rows["CVE-2026-0004"]["component"], "php")
+
     def test_history_days_from_kv(self):
         from app.pipeline import history_days
         with tempfile.TemporaryDirectory() as d:
