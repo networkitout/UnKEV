@@ -1,6 +1,6 @@
 # UnKEV
 
-Emerging-vulnerability forecast for your estate. UnKEV ingests KEV, NVD, EPSS and security news, and uses Claude to turn the news into structured signals. It then ranks catalog components by how likely they are to break soon, scaled by how much of each you actually run, according to your inventory.
+Emerging-vulnerability forecast for your estate. UnKEV ingests KEV, NVD, EPSS and security news, and uses Claude to turn the news into structured signals. It then ranks catalog components by how likely they are to break soon.
 
 The ranking is deterministic and reproducible. Claude extracts facts and writes the daily brief. It never sets a score or a weight.
 
