@@ -91,7 +91,7 @@ def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
                 stats["edges"] += 1
         if row["source"] in ("nvd", "osv"):
             # Deterministic signals already exist; Claude only adds surface tags.
-            stats["tagged"] += ctx.db.tag_signals_for_intel(row["id"], f["surfaces"], f["confidence"])
+            stats["tagged"] += ctx.db.tag_signals_for_intel(row["id"], f["surfaces"], f["confidence"], f["components"])
         else:
             observed = row["published_at"] or iso(utcnow())
             for cid in f["components"]:

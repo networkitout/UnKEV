@@ -15,6 +15,7 @@ class _Comp:
     kev: list[tuple[re.Pattern, re.Pattern]]
     sw: list[re.Pattern]
     os: list[re.Pattern]
+    description_match: bool = True
 
 
 @dataclass
@@ -37,12 +38,19 @@ class Matcher:
                 kev=[(re.compile(v, re.I), re.compile(p, re.I)) for v, p in c.get("kev") or []],
                 sw=[re.compile(x, re.I) for x in inv.get("software") or []],
                 os=[re.compile(x, re.I) for x in inv.get("os") or []],
+                description_match=c.get("description_match", True) is not False,
             ))
         terms = [re.escape(t) for t in self.prefilter_terms]
         self._prefilter = re.compile(r"\b(" + "|".join(terms) + r")\b", re.I) if terms else None
 
     def match_text(self, text: str) -> list[str]:
+        """Every alias hit. For prefiltering, where a later step decides."""
         return [c.id for c in self._c if c.alias_re and c.alias_re.search(text or "")]
+
+    def match_description(self, text: str) -> list[str]:
+        """Alias hits that may stand on their own as a signal: skips components
+        flagged description_match: false, which only match by CPE."""
+        return [c.id for c in self._c if c.description_match and c.alias_re and c.alias_re.search(text or "")]
 
     def match_cpe(self, criteria: str) -> list[str]:
         # cpe:2.3:a:vendor:product:version:...

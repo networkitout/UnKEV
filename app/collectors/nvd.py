@@ -47,7 +47,7 @@ def process_nvd_page(vulns: list[dict], db: DB, matcher, cfg: dict) -> dict:
         comps = sorted({c for x in crit for c in matcher.match_cpe(x)})
         conf = 0.9
         if not comps:
-            comps = matcher.match_text(desc)
+            comps = matcher.match_description(desc)
             conf = 0.6
         url = f"https://nvd.nist.gov/vuln/detail/{cid_str}"
         published = cve.get("published") or iso(utcnow())

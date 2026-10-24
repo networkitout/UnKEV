@@ -43,6 +43,12 @@
 #
 # Matchers:
 #   aliases    case-insensitive whole-word match against intel text
+#   description_match: false
+#              never match this component from an NVD description, only from
+#              CPE. For runtimes named in thousands of unrelated advisories
+#              ("Craft CMS ... PHP", "Electron ... Node.js", a router's httpd)
+#              the description fallback is >90% noise. Aliases still drive the
+#              RSS prefilter, where Claude makes the call.
 #   cpe        "vendor:product" pairs matched against NVD cpeMatch criteria
 #   kev        [vendorProject_regex, product_regex] against CISA KEV
 #   inventory  regexes applied to inventory software names / OS strings
@@ -53,6 +59,7 @@ php:
   priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
   surfaces: [http-parsing, multipart-upload, session-state, serialization, archive, image-codec]
   aliases: ["PHP", "php-fpm", "mod_php", "php-cgi", "PHP2Shell"]
+  description_match: false
   cpe: ["php:php"]
   kev: [["^php$", "php"]]
   inventory: {software: ["^php(-fpm|-cli|-common)?\\d*([ .-]|$)"]}
@@ -63,6 +70,7 @@ nodejs:
   priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 2}
   surfaces: [http-parsing, compression, dns, ip-canonicalization, tls-validation, auth-session-reuse]
   aliases: ["Node.js", "NodeJS", "undici", "llhttp"]
+  description_match: false
   cpe: ["nodejs:node.js", "nodejs:undici"]
   kev: [["node", "node"]]
   inventory: {software: ["^node(\\.?js)?([ .-]|$)"]}
@@ -93,6 +101,7 @@ perl:
   priors: {memory_unsafe: 1, preauth: 2, install_base: 2, embedding: 3, legacy_tail: 3}
   surfaces: [http-parsing, multipart-upload, serialization]
   aliases: ["Perl"]
+  description_match: false
   cpe: ["perl:perl"]
   kev: [["perl", "perl"]]
   inventory: {software: ["^perl([ .-]|$)"]}
@@ -113,6 +122,7 @@ apache-httpd:
   priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
   surfaces: [http-parsing, path-handling, multipart-upload, tls-validation]
   aliases: ["Apache HTTP Server", "httpd", "Apache httpd"]
+  description_match: false
   cpe: ["apache:http_server"]
   kev: [["apache", "http server|httpd"]]
   inventory: {software: ["^httpd([ .-]|$)", "^apache2?([ .-]|$)", "apache http server"]}
@@ -123,6 +133,7 @@ nginx:
   priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 2}
   surfaces: [http-parsing, dns, tls-validation, compression]
   aliases: ["nginx", "NGINX Plus"]
+  description_match: false
   cpe: ["f5:nginx", "nginx:nginx"]
   kev: [["nginx|f5", "nginx"]]
   inventory: {software: ["^nginx"]}
@@ -313,6 +324,7 @@ windows:
   priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 1, legacy_tail: 3}
   surfaces: [kernel-network, archive, document-parser, auth-session-reuse]
   aliases: ["Windows Server", "MSMQ", "Windows Shell", "Mark of the Web"]
+  description_match: false
   cpe: ["microsoft:windows"]
   kev: [["^microsoft$", "^win"]]
   inventory: {os: ["windows"]}

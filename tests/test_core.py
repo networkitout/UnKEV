@@ -206,6 +206,28 @@ class Matching(unittest.TestCase):
         self.assertNotIn("php", self.m.match_text("PHPUnit release notes"))
         self.assertIn("nodejs", self.m.match_text("Node.js security release"))
 
+    def test_description_match_flag(self):
+        text = "Craft CMS allows any authenticated PHP user to run httpd on Node.js with libcurl"
+        self.assertEqual(set(self.m.match_text(text)) & {"php", "apache-httpd", "nodejs", "curl"},
+                         {"php", "apache-httpd", "nodejs", "curl"})           # prefilter: everything
+        desc = self.m.match_description(text)
+        self.assertIn("curl", desc)                                            # libraries still match by description
+        self.assertFalse({"php", "apache-httpd", "nodejs"} & set(desc))        # flagged runtimes need a CPE
+        self.assertEqual(self.m.match_cpe("cpe:2.3:a:php:php:8.4.26:*:*:*:*:*:*:*"), ["php"])
+
+    def test_tagging_is_scoped_to_claude_components(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            for cid in ("php", "curl"):
+                db.add_signal(intel_id="n1", component_id=cid, origin="nvd", cve="CVE-2026-1",
+                              observed_at="2026-10-22T00:00:00+00:00", confidence=0.6)
+            self.assertEqual(db.tag_signals_for_intel("n1", ["http-parsing"], 0.9, ["curl"]), 1)
+            rows = {s["component_id"]: s for s in db.signals_since("2000")}
+            self.assertEqual(rows["curl"]["surfaces"], ["http-parsing"])
+            self.assertEqual(rows["php"]["surfaces"], [])                      # Claude didn't name php
+            self.assertEqual(rows["php"]["confidence"], 0.6)
+            self.assertEqual(db.tag_signals_for_intel("n1", ["dns"], 0.9, []), 0)   # Claude named nothing
+
     def test_cpe_and_kev(self):
         self.assertEqual(self.m.match_cpe("cpe:2.3:a:php:php:*:*:*:*:*:*:*:*"), ["php"])
         self.assertEqual(self.m.match_cpe("garbage"), [])

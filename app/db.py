@@ -155,10 +155,23 @@ class DB:
                  observed_at, title, url, evidence),
             )
 
-    def tag_signals_for_intel(self, intel_id: str, surfaces: list[str], confidence: float) -> int:
+    def tag_signals_for_intel(self, intel_id: str, surfaces: list[str], confidence: float,
+                              components: list[str] | None = None) -> int:
+        """Apply Claude's surface tags to the deterministic signals on an intel
+        item. When Claude named components, only those signals are tagged: a
+        description-matched signal on a component Claude didn't name is more
+        likely a false match than a missed one."""
         with self.conn() as c:
-            cur = c.execute("UPDATE signals SET surfaces=?, confidence=MAX(confidence, ?) WHERE intel_id=?",
-                            (json.dumps(surfaces), confidence, intel_id))
+            if components is None:
+                cur = c.execute("UPDATE signals SET surfaces=?, confidence=MAX(confidence, ?) WHERE intel_id=?",
+                                (json.dumps(surfaces), confidence, intel_id))
+            elif not components:
+                return 0
+            else:
+                marks = ",".join("?" * len(components))
+                cur = c.execute(f"UPDATE signals SET surfaces=?, confidence=MAX(confidence, ?) "
+                                f"WHERE intel_id=? AND component_id IN ({marks})",
+                                (json.dumps(surfaces), confidence, intel_id, *components))
             return cur.rowcount
 
     def signals_since(self, since_iso: str) -> list[dict]:
