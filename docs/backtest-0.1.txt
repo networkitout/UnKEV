@@ -1,4 +1,4 @@
-UnKEV 0.1 model (679f034) vs CISA KEV catalog 2026.10.23 (1756 entries)
+UnKEV 0.1 model (Phase 1 tree, before Phase 2) vs CISA KEV catalog 2026.10.23 (1756 entries)
 python -m scripts.backtest kev.json --start 2025-01 --end 2026-10 --k 10
 
 19 months with catalog KEV hits, 33 components, k=10
