@@ -22,6 +22,13 @@ The ranking is deterministic and reproducible. Claude extracts facts and writes 
                                                      └──► Claude: daily brief (escaped text)
 ```
 
+## Two views
+
+- **`/` Executive view.** For leadership: four posture numbers, today's summary, the top ten risks with a plain-language *why now* and *our exposure*, what's actively exploited and whether it touches us, blind spots, and movers. Light, spacious, no model internals.
+- **`/analyst` Analyst view.** The working surface: full ranking with term breakdowns, the per-component detail panel, the spillover grid, proposed dependency edges, unmapped tech, feed health, and the run buttons.
+
+Both are rendered from the same snapshot. `python -m scripts.render_preview out.html [--analyst]` writes either as a single static HTML file for review.
+
 ## Quick start (demo, no keys, no network)
 
 ```bash

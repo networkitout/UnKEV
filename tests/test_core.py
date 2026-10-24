@@ -15,7 +15,7 @@ from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
 from app.matching import Matcher
 from app.scoring import decay, exposure_score, mean_decay, prior_score, saturate, score_all, validate_config
-from app.views import brief_html
+from app.views import brief_blocks, brief_html, estate_phrase, exec_context, exposure_phrase, why_now
 
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
 CFG = load_yaml("scoring.yaml")
@@ -305,6 +305,67 @@ class LLMBoundary(unittest.TestCase):
         self.assertNotIn("<img", html)
         self.assertIn('<span class="tag verified">verified: kev</span>', html)
         self.assertIn('<span class="tag inferred">inferred</span>', html)
+
+
+class ExecutiveView(unittest.TestCase):
+    def test_why_now_is_plain_language(self):
+        res = by_id(score_all(COMPS, [sig("php", kev=True), sig("nodejs", surfaces=["ip-canonicalization"], emergency=True, cve="CVE-2026-7")], {}, CFG, NOW))
+        self.assertTrue(why_now(res["php"]).startswith("Exploited in the wild, per CISA KEV: CVE-2026-0001"))
+        self.assertTrue(why_now(res["nodejs"]).startswith("Emergency patch released: CVE-2026-7"))
+        self.assertTrue(why_now(res["panos"]).startswith("Bundles PHP, which just had a serious flaw (CVE-2026-0001), vendor impact not yet confirmed"))
+        self.assertTrue(why_now(res["curl"]).startswith("The same kind of flaw just hit Node.js (ip-canonicalization)"))
+        self.assertEqual(why_now(res["zlib"]), "No recent activity; this is structural risk only")
+        r = dict(res["php"], activity_ratio=3.2)
+        self.assertTrue(why_now(r).endswith("3.2× its usual rate of new flaws"))
+        old = {"drivers": [{"kind": "direct", "label": "CVE-1 (KEV)"}]}          # pre-0.2 snapshot without flags
+        self.assertEqual(why_now(old), "CVE-1 (KEV)")
+
+    def test_exposure_and_estate_phrases(self):
+        self.assertEqual(exposure_phrase({"exposure_status": "unknown", "inventory": {}}), ("Unknown", "Not visible in inventory"))
+        self.assertEqual(exposure_phrase({"exposure_status": "none", "inventory": {"hosts": 0}})[0], "Not found")
+        self.assertEqual(exposure_phrase({"exposure_status": "known", "inventory": {"hosts": 6, "internet_facing": 2}}),
+                         ("6 hosts", "6 hosts, 2 internet-facing"))
+        self.assertIn("declared, not verified", exposure_phrase({"exposure_status": "declared", "inventory": {"hosts": 1}})[1])
+        rows = {"windows": {"exposure_status": "known", "inventory": {"hosts": 40}},
+                "zlib": {"exposure_status": "unknown", "inventory": {}},
+                "nginx": {"exposure_status": "none", "inventory": {"hosts": 0}}}
+        self.assertEqual(estate_phrase({"components": ["windows", "zlib"]}, rows), ("yes", "Yes, 40 hosts"))
+        self.assertEqual(estate_phrase({"components": ["zlib"]}, rows), ("unknown", "Unknown"))
+        self.assertEqual(estate_phrase({"components": ["nginx"]}, rows), ("no", "No"))
+        self.assertEqual(estate_phrase({"components": []}, rows), ("na", "Not in our catalog"))
+
+    def test_brief_blocks_escape_and_structure(self):
+        blocks = brief_blocks("PHP leads [verified: kev].\n\n- Patch <b>now</b>\n- Hunt [inferred]\n\nDone.")
+        self.assertEqual([k for k, _ in blocks], ["p", "ul", "p"])
+        self.assertIn('<span class="tag verified">verified: kev</span>', str(blocks[0][1]))
+        self.assertIn("&lt;b&gt;now&lt;/b&gt;", str(blocks[1][1][0]))
+        self.assertEqual(len(blocks[1][1]), 2)
+
+    def test_exec_context_counts(self):
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            inv = {"windows": {"status": "known", "hosts": 40, "internet_facing": 0, "critical": 0, "detail": {}}}
+            db.replace_inventory(inv)
+            sigs = [sig("windows", kev=True, exploitation="confirmed", days_ago=2, cve="CVE-2026-1"),
+                    sig("php", kev=True, exploitation="confirmed", emergency=True, days_ago=1, cve="CVE-2026-2")]
+            from app.collectors.kev import process_kev
+            process_kev({"vulnerabilities": [{"cveID": "CVE-2026-1", "vendorProject": "Microsoft", "product": "Windows",
+                                              "vulnerabilityName": "x", "dateAdded": sigs[0]["observed_at"][:10],
+                                              "shortDescription": "d"}]}, db, Matcher(COMPS), 120)
+            week_ago = datetime.now(timezone.utc) - timedelta(days=8)
+            db.write_snapshot(week_ago.isoformat(), score_all(COMPS, [], db.inventory(), CFG, week_ago))
+            db.write_snapshot(datetime.now(timezone.utc).isoformat(), score_all(COMPS, sigs, db.inventory(), CFG))
+            ctx = types.SimpleNamespace(db=db, components=COMPS)
+            x = exec_context(ctx)
+            self.assertEqual(x["kpis"]["exploited"], 1)
+            self.assertEqual(x["kpis"]["exploited_us"], 1)                  # windows is in inventory
+            self.assertEqual(x["exploited"][0]["estate"], "Yes, 40 hosts")
+            self.assertGreaterEqual(x["kpis"]["rising"], 2)                 # php and windows jumped vs last week
+            self.assertIn("php", [r["component_id"] for r in x["up"]])
+            self.assertEqual(x["kpis"]["blind"], len(x["blind"]))
+            self.assertTrue(all(r["exposure_status"] == "unknown" for r in x["blind"]))
+            self.assertEqual(len(x["top"]), 10)
+            self.assertTrue(all("why" in r and "exposure_long" in r for r in x["top"]))
 
 
 class Inventory(unittest.TestCase):

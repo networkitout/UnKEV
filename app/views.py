@@ -45,8 +45,24 @@ def summ(detail: str | None, limit: int = 110) -> str:
     return ", ".join(parts)[:limit]
 
 
+def brief_blocks(text: str | None) -> list[tuple[str, object]]:
+    """Split the brief into paragraphs and bullet lists for readable rendering.
+    Every piece goes through brief_html, so it is escaped before any markup."""
+    blocks: list[tuple[str, object]] = []
+    for para in re.split(r"\n\s*\n", (text or "").strip()):
+        lines = [l.rstrip() for l in para.splitlines() if l.strip()]
+        if not lines:
+            continue
+        if all(re.match(r"^\s*(?:[-•*]|\d+[.)])\s+", l) for l in lines):
+            blocks.append(("ul", [brief_html(re.sub(r"^\s*(?:[-•*]|\d+[.)])\s+", "", l)) for l in lines]))
+        else:
+            blocks.append(("p", brief_html(" ".join(l.strip() for l in lines))))
+    return blocks
+
+
 def register_filters(env) -> None:
     env.filters["brief_html"] = brief_html
+    env.filters["brief_blocks"] = brief_blocks
     env.filters["summ"] = summ
     env.globals["origin_label"] = origin_label
 
@@ -66,6 +82,83 @@ def band(priority: float) -> str:
     if priority >= 30:
         return "med"
     return "low"
+
+
+BAND_WORDS = {"crit": "Critical", "high": "High", "med": "Medium", "low": "Low"}
+
+
+def shorten(text: str, limit: int = 80) -> str:
+    text = (text or "").strip()
+    if len(text) <= limit:
+        return text
+    cut = text[:limit].rsplit(" ", 1)[0].rstrip(",;:.")
+    return cut + "…"
+
+
+def why_now(r: dict) -> str:
+    """One plain-language sentence for the top driver, for readers who don't
+    know the model's terms. Falls back to the raw label on old snapshots."""
+    d = r["drivers"][0] if r.get("drivers") else None
+    if not d:
+        reason = "No recent activity; this is structural risk only"
+    elif d["kind"] == "inherited" and "source" in d:
+        reason = f"Bundles {d['source']}, which just had a serious flaw"
+        if d.get("cve"):
+            reason += f" ({d['cve']})"
+        if not d.get("confirmed"):
+            reason += ", vendor impact not yet confirmed"
+    elif d["kind"] == "spillover" and "source" in d:
+        reason = f"The same kind of flaw just hit {d['source']} ({', '.join(d.get('surfaces') or [])})"
+    elif d["kind"] == "direct" and "flags" in d:
+        f, cve = d["flags"], d.get("cve")
+        subject = cve or shorten(d.get("title") or "a reported flaw")
+        if f.get("kev"):
+            reason = f"Exploited in the wild, per CISA KEV: {subject}"
+        elif d.get("exploitation") == "confirmed":
+            reason = f"Exploitation confirmed in the wild: {subject}"
+        elif d.get("exploitation") == "attempts":
+            reason = f"Exploitation attempts reported: {subject}"
+        elif f.get("emergency"):
+            reason = f"Emergency patch released: {subject}"
+        elif f.get("poc_public"):
+            reason = f"Public exploit code available: {subject}"
+        else:
+            reason = f"New serious flaw: {subject}"
+    else:
+        reason = d["label"]
+    ratio = r.get("activity_ratio")
+    if ratio is not None and ratio >= 1.5:
+        reason += f". {ratio:.1f}× its usual rate of new flaws"
+    return reason
+
+
+def exposure_phrase(r: dict) -> tuple[str, str]:
+    """(short, long) description of what the estate runs."""
+    inv, st = r.get("inventory") or {}, r.get("exposure_status")
+    if st == "unknown":
+        return "Unknown", "Not visible in inventory"
+    if st == "none":
+        return "Not found", "Inventory shows none"
+    hosts, ext = int(inv.get("hosts", 0)), int(inv.get("internet_facing", 0))
+    short = f"{hosts} host{'s' if hosts != 1 else ''}"
+    long = short + (f", {ext} internet-facing" if ext else "")
+    if st == "declared":
+        long += " (declared, not verified)"
+    return short, long
+
+
+def estate_phrase(e: dict, by_id: dict[str, dict]) -> tuple[str, str]:
+    """For an exploited item: (class, text) answering 'does this touch us?'"""
+    comps = [by_id[c] for c in e.get("components") or [] if c in by_id]
+    if not comps:
+        return "na", "Not in our catalog"
+    known = [c for c in comps if c["exposure_status"] in ("known", "declared")]
+    if known:
+        hosts = sum(int(c["inventory"].get("hosts", 0)) for c in known)
+        return "yes", f"Yes, {hosts} host{'s' if hosts != 1 else ''}"
+    if all(c["exposure_status"] == "none" for c in comps):
+        return "no", "No"
+    return "unknown", "Unknown"
 
 
 def ago(ts: str | None) -> str:
@@ -137,9 +230,50 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         "unmapped": [dict(u) for u in ctx.db.top_unmapped(12)],
         "embed_candidates": [dict(e) for e in ctx.db.embed_candidates(12)],
         "runs": runs,
-        "tokens_today": ctx.db.usage_today(),
-        "token_budget": ctx.settings.llm_daily_token_budget,
         "signals_30d": len(signals),
         "unknown_top": [r for r in unknown if r["rank"] <= 15],
         "ago": ago,
+    }
+
+
+def exec_context(ctx, top_n: int = 10) -> dict:
+    """Leadership view: posture, summary, top risks in plain language, what is
+    exploited and whether it touches us, blind spots, movers."""
+    ts, rows = ctx.db.latest_snapshot()
+    prev = ctx.db.snapshot_before(iso(utcnow() - timedelta(days=7)))
+    by_id = {r["component_id"]: r for r in rows}
+    for r in rows:
+        r["band"] = band(r["priority"])
+        r["band_word"] = BAND_WORDS[r["band"]]
+        p = prev.get(r["component_id"])
+        r["delta"] = None if p is None else round(r["priority"] - p, 1)
+        r["why"] = why_now(r)
+        r["exposure_short"], r["exposure_long"] = exposure_phrase(r)
+    exploited = ctx.db.exploited_recent(30)
+    for e in exploited:
+        e["component_names"] = [ctx.components.get(c, {}).get("name", c) for c in e["components"]]
+        e["estate_class"], e["estate"] = estate_phrase(e, by_id)
+    top = rows[:top_n]
+    watch = [r for r in rows if r["rank"] <= 15]
+    moved = [r for r in rows if r["delta"] is not None]
+    brief = ctx.db.latest_brief()
+    return {
+        "ts": ts, "ts_ago": ago(ts),
+        "kpis": {
+            "high": sum(1 for r in rows if r["band"] in ("crit", "high")),
+            "crit": sum(1 for r in rows if r["band"] == "crit"),
+            "exploited": len(exploited),
+            "exploited_us": sum(1 for e in exploited if e["estate_class"] == "yes"),
+            "rising": sum(1 for r in moved if r["delta"] > 5),
+            "blind": sum(1 for r in watch if r["exposure_status"] == "unknown"),
+            "watch": len(watch),
+        },
+        "brief": dict(brief) if brief else None,
+        "brief_ago": ago(brief["ts"]) if brief else None,
+        "top": top,
+        "exploited": exploited[:10], "exploited_total": len(exploited),
+        "blind": [r for r in watch if r["exposure_status"] == "unknown"],
+        "up": sorted((r for r in moved if r["delta"] > 0.5), key=lambda r: -r["delta"])[:5],
+        "down": sorted((r for r in moved if r["delta"] < -0.5), key=lambda r: r["delta"])[:5],
+        "baseline_ready": bool(rows and rows[0].get("baseline_ready")),
     }

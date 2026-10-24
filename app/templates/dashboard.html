@@ -3,9 +3,10 @@
 <header class="bar">
   <div class="mark"><span class="b">Un</span><span class="a">KEV</span></div>
   <div class="stats">
+    <span class="muted">analyst view</span>
     <span>scored <b>{{ ts_ago }}</b></span>
     <span>signals, 30 days <b>{{ signals_30d }}</b></span>
-    <span>Claude tokens today <b>{{ "{:,}".format(tokens_today) }}</b> of {{ "{:,}".format(token_budget) }}</span>
+    <a href="/">Executive view</a>
   </div>
   <div class="spacer"></div>
   <span id="run-status"></span>
@@ -37,7 +38,7 @@
         {% for r in rows %}
           <tr class="{{ 'sel' if sel and sel.component_id == r.component_id }}">
             <td class="num muted">{{ r.rank }}</td>
-            <td class="name"><a href="?c={{ r.component_id }}" hx-get="/?c={{ r.component_id }}"
+            <td class="name"><a href="?c={{ r.component_id }}" hx-get="/analyst?c={{ r.component_id }}"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">{{ r.name }}</a><span class="eco">{{ r.ecosystem }}</span></td>
             <td class="num"><span class="band {{ r.band }}"></span><span class="prio">{{ "%.1f"|format(r.priority) }}</span></td>
             <td><div class="lbar"><div class="track"><div class="fill" style="width: {{ r.likelihood }}%"></div></div>

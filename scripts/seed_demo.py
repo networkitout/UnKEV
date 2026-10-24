@@ -17,6 +17,7 @@ from app.db import DB, iso, item_id, utcnow
 from app.inventory import sync_inventory
 from app.pipeline import Ctx
 from app.scoring import score_all
+from app.views import shorten
 
 S = [
     # component, cve, date, cvss, surfaces, exploitation, kev, emergency, poc, embargo, conf, url, evidence
@@ -113,11 +114,11 @@ def main():
     db = ctx.db
     for (cid, cve, date, cvss, surf, expl, kev, emerg, poc, emb, conf, url, ev) in S:
         iid = item_id("seed", cid, cve or ev[:40])
-        db.upsert_intel(id=iid, source="seed", url=url, title=cve or ev[:60], published_at=date,
+        db.upsert_intel(id=iid, source="seed", url=url, title=cve or shorten(ev), published_at=date,
                         raw_text=ev, status="extracted")
         db.add_signal(intel_id=iid, component_id=cid, origin="seed", cve=cve, cvss=cvss, surfaces=surf,
                       exploitation=expl, kev=kev, emergency=emerg, poc_public=poc, embargo_broken=emb,
-                      confidence=conf, observed_at=f"{date}T14:00:00+00:00", title=cve or ev[:60],
+                      confidence=conf, observed_at=f"{date}T14:00:00+00:00", title=cve or shorten(ev),
                       url=url, evidence=ev)
 
     inv, stats = asyncio.run(sync_inventory(None, ctx.inventory_cfg | {"mode": "fixture"}, ctx.matcher,

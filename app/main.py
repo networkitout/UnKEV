@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 
 from . import pipeline
 from .config import ROOT, get_settings
-from .views import dashboard_context, register_filters
+from .views import dashboard_context, exec_context, register_filters
 
 security = HTTPBasic()
 templates = Jinja2Templates(directory=str(ROOT / "app" / "templates"))  # autoescape on for .html
@@ -66,7 +66,12 @@ async def healthz():
 
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard(request: Request, c: str | None = None, _: str = Depends(require_auth)):
+async def executive(request: Request, _: str = Depends(require_auth)):
+    return templates.TemplateResponse(request, "exec.html", exec_context(pipeline.Ctx()) | {"live": True})
+
+
+@app.get("/analyst", response_class=HTMLResponse)
+async def analyst(request: Request, c: str | None = None, _: str = Depends(require_auth)):
     ctx = pipeline.Ctx()
     return templates.TemplateResponse(request, "dashboard.html", dashboard_context(ctx, c) | {"live": True})
 

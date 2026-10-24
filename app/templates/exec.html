@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block styles %}<link rel="stylesheet" href="{{ static_prefix|default('/static') }}/exec.css">{% endblock %}
+{% block body %}
+<header class="mast">
+  <div class="wrap">
+    <div class="mark"><span class="b">Un</span><span class="a">KEV</span></div>
+    <div class="tagline">Emerging-vulnerability forecast</div>
+    <div class="updated">{% if ts %}Updated {{ ts_ago }}{% else %}No forecast yet{% endif %}</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="kpis" aria-label="Posture">
+    <div class="kpi {{ 'alert' if kpis.high }}">
+      <div class="n">{{ kpis.high }}</div>
+      <div class="l">High-priority components</div>
+      <div class="s">{% if kpis.crit %}{{ kpis.crit }} critical{% else %}none critical{% endif %}</div>
+    </div>
+    <div class="kpi">
+      <div class="n">{{ kpis.exploited }}</div>
+      <div class="l">Exploited in the wild, last 30 days</div>
+      <div class="s">{% if kpis.exploited_us %}<b class="warn">{{ kpis.exploited_us }} touch our estate</b>{% else %}none known to touch our estate{% endif %}</div>
+    </div>
+    <div class="kpi">
+      <div class="n">{{ kpis.rising }}</div>
+      <div class="l">Rising this week</div>
+      <div class="s">moved up more than 5 points</div>
+    </div>
+    <div class="kpi {{ 'dim' if not kpis.blind }}">
+      <div class="n">{{ kpis.blind }}<span class="of">of {{ kpis.watch }}</span></div>
+      <div class="l">Blind spots in the top {{ kpis.watch }}</div>
+      <div class="s">we can't see whether we run them</div>
+    </div>
+  </section>
+
+  <section class="sec" aria-labelledby="sum-h">
+    <header>
+      <h2 id="sum-h">Today's summary</h2>
+      <p>{% if brief %}Written by Claude from the scored data, {{ brief_ago }}. Tags show where each claim comes from.{% else %}The summary is written after the first scoring run once a Claude key is configured.{% endif %}</p>
+    </header>
+    {% if brief %}
+      <div class="prose">
+        {% for kind, body in brief.body|brief_blocks %}
+          {% if kind == 'ul' %}<ul>{% for li in body %}<li>{{ li }}</li>{% endfor %}</ul>
+          {% else %}<p>{{ body }}</p>{% endif %}
+        {% endfor %}
+      </div>
+    {% else %}<p class="empty">No summary yet.</p>{% endif %}
+  </section>
+
+  <section class="sec" aria-labelledby="top-h">
+    <header>
+      <h2 id="top-h">Top risks</h2>
+      <p>What is most likely to hurt us soon, and why. Ranked by how likely a component is to break, scaled by how much of it we run.</p>
+    </header>
+    {% if top %}
+    <ol class="risks">
+      {% for r in top %}
+      <li class="risk {{ r.band }}">
+        <div class="rank">{{ r.rank }}</div>
+        <div class="score"><div class="n">{{ "%.0f"|format(r.priority) }}</div><div class="w">{{ r.band_word }}</div></div>
+        <div class="what">
+          <div class="name"><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a></div>
+          <div class="why">{{ r.why }}</div>
+        </div>
+        <div class="exp exp-{{ r.exposure_status }}">
+          <div class="k">Our exposure</div>
+          <div class="v">{{ r.exposure_long }}</div>
+        </div>
+        <div class="trend">
+          {% if r.delta is none %}<span class="new">new</span>
+          {% elif r.delta > 0.5 %}<span class="up">▲ {{ r.delta }}</span>
+          {% elif r.delta < -0.5 %}<span class="down">▼ {{ r.delta|abs }}</span>
+          {% else %}<span class="flat">—</span>{% endif %}
+          <div class="k">vs last week</div>
+        </div>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}<p class="empty">No scores yet.</p>{% endif %}
+  </section>
+
+  <section class="sec" aria-labelledby="ex-h">
+    <header>
+      <h2 id="ex-h">Actively exploited</h2>
+      <p>Vulnerabilities confirmed exploited in the last 30 days, from CISA KEV and reporting, and whether they touch what we run.</p>
+    </header>
+    {% if exploited %}
+    <table class="plain">
+      <thead><tr><th>Date</th><th>Product</th><th>CVE</th><th>In our estate?</th></tr></thead>
+      <tbody>
+      {% for e in exploited %}
+        <tr>
+          <td class="muted nowrap">{{ e.date }}</td>
+          <td>{{ e.component_names|join(', ') if e.component_names else e.title }}</td>
+          <td class="nowrap">{% if e.cve %}<a href="{{ e.url or 'https://nvd.nist.gov/vuln/detail/' ~ e.cve }}" rel="noopener noreferrer" target="_blank">{{ e.cve }}</a>{% else %}<span class="muted">no CVE</span>{% endif %}</td>
+          <td><span class="pill {{ e.estate_class }}">{{ e.estate }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% if exploited_total > exploited|length %}<p class="more"><a href="/analyst">All {{ exploited_total }} in the analyst view</a></p>{% endif %}
+    {% else %}<p class="empty">Nothing confirmed exploited in the last 30 days.</p>{% endif %}
+  </section>
+
+  <div class="pair">
+    <section class="sec" aria-labelledby="bl-h">
+      <header>
+        <h2 id="bl-h">Blind spots</h2>
+        <p>High-ranking components we can't see in inventory. Unknown is a gap, not a clean result.</p>
+      </header>
+      {% if blind %}
+      <ul class="blind">
+        {% for r in blind %}
+        <li><span class="band {{ r.band }}"></span><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a><span class="muted">#{{ r.rank }}, {{ r.band_word|lower }} priority</span></li>
+        {% endfor %}
+      </ul>
+      <p class="hint">Fix: add application-level inventory, or declare the appliance in <code>config/appliances.yaml</code>.</p>
+      {% else %}<p class="empty">Every top-{{ kpis.watch }} component is visible in inventory.</p>{% endif %}
+    </section>
+
+    <section class="sec" aria-labelledby="mv-h">
+      <header>
+        <h2 id="mv-h">Movers</h2>
+        <p>Largest changes in priority since this time last week.</p>
+      </header>
+      {% if up or down %}
+      <div class="movers">
+        <div>
+          <div class="k">Rising</div>
+          {% for r in up %}<div class="mv"><span class="up">▲ {{ r.delta }}</span><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a></div>{% else %}<div class="muted">none</div>{% endfor %}
+        </div>
+        <div>
+          <div class="k">Falling</div>
+          {% for r in down %}<div class="mv"><span class="down">▼ {{ r.delta|abs }}</span><a href="/analyst?c={{ r.component_id }}">{{ r.name }}</a></div>{% else %}<div class="muted">none</div>{% endfor %}
+        </div>
+      </div>
+      {% else %}<p class="empty">No week-old snapshot to compare against yet.</p>{% endif %}
+    </section>
+  </div>
+
+  <footer class="foot">
+    <span>The ranking is deterministic and reproducible. Claude extracts facts and writes the summary; it never sets a score.</span>
+    <a href="/analyst">Analyst view →</a>
+  </footer>
+</main>
+{% endblock %}

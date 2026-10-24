@@ -57,6 +57,12 @@ Half-lives: inherited 45 days (new); others unchanged.
 - Demo appliances gain a Panorama that embeds PHP.
 - The sample brief drops the false claim that PHP 7.4 gets no upstream fix (it has minimal source backports; distro and LTS vendors, cPanel and Plesk ship builds), and mentions CVE-2026-115560 and the unconfirmed PAN-OS edge.
 
+### Executive view
+
+- `/` is now a leadership view: posture tiles, today's summary as readable paragraphs, the top ten risks with a plain-language *why now* and *our exposure* and a weekly trend, actively exploited items with an *in our estate?* answer, blind spots, and movers. Light theme, system font, every section titled, subtitled and ruled.
+- The previous dashboard is the analyst view at `/analyst`, minus the Claude token counter.
+- Drivers carry structured fields (`cve`, `flags`, `exploitation`, `source`, `surfaces`, `confirmed`) so views can phrase them without parsing labels.
+
 ### Live-run fixes
 
 - The 5.5 flagship models reject forced `tool_choice`. The extractor now tries the forced tool first and falls back to `auto` per model, discarding any response that doesn't call `record_findings`; both jobs default to `claude-opus-5-5`. Extraction gets 8000 output tokens of headroom for adaptive thinking.

@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+<title>UnKEV</title>
+<style>/* UnKEV. Deep blue-grey surfaces, burnt orange as brand accent (used sparingly),
+   Docker blue for data, semantic color reserved for severity bands.
+   Flat, 4px corners, JetBrains Mono, dense. */
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 400; font-display: swap;
+}
+@font-face {
+  font-family: "JetBrains Mono";
+  font-weight: 700; font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --bg: #121921;
+  --surface: #19212b;
+  --surface-2: #202a36;
+  --line: #2b3746;
+  --text: #d5dde7;
+  --muted: #8693a4;
+  --faint: #5a6878;
+  --accent: #E56A1F;
+  --blue: #2496ED;
+  --crit: #E5484D;
+  --high: #D9B43A;
+  --med: #6E8BA8;
+  --low: #46546a;
+  --r: 4px;
+  --font: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font: 12.5px/1.5 var(--font); }
+a { color: var(--blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+/* top bar */
+.bar { display: flex; align-items: center; gap: 28px; padding: 10px 18px;
+       border-bottom: 1px solid var(--line); background: var(--surface); }
+.mark { font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+.mark .a { color: var(--accent); }
+.mark .b { color: var(--blue); }
+.stats { display: flex; gap: 22px; color: var(--muted); }
+.stats b { color: var(--text); font-weight: 400; }
+.bar .spacer { flex: 1; }
+.btn { font: inherit; color: var(--text); background: var(--surface-2); border: 1px solid var(--line);
+       border-radius: var(--r); padding: 5px 12px; cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.run-msg { color: var(--muted); }
+
+main { padding: 14px 18px 40px; display: grid; gap: 14px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.panel > h2 { margin: 0; padding: 8px 12px; font-size: 12.5px; font-weight: 700;
+              border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: baseline; }
+.panel > h2 .muted { font-weight: 400; }
+
+/* brief */
+.brief { border-left: 3px solid var(--blue); }
+.brief .body { padding: 10px 14px; max-width: 110ch; white-space: pre-wrap; }
+.tag { font-size: 11px; padding: 0 4px; border-radius: 2px; white-space: nowrap; }
+.tag.verified { color: var(--blue); background: rgba(36,150,237,.12); }
+.tag.reported { color: var(--high); background: rgba(217,180,58,.12); }
+.tag.inferred { color: var(--muted); background: rgba(134,147,164,.14); }
+.empty { padding: 14px; color: var(--muted); }
+
+/* layout */
+.scroll-x { overflow-x: auto; }
+.split { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 14px; align-items: start; }
+.split .wide { grid-column: 1 / -1; }
+@media (min-width: 1600px) {
+  .split { grid-template-columns: minmax(0, 1fr) 420px 400px; }
+  .split .wide { grid-column: auto; }
+}
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+.stack { display: grid; gap: 14px; }
+@media (max-width: 1150px) { .split, .pair { grid-template-columns: minmax(0, 1fr); } }
+main > *, .split > *, .pair > * { min-width: 0; }
+@media (max-width: 640px) {
+  .bar { flex-wrap: wrap; gap: 10px 18px; }
+  .stats { flex-wrap: wrap; gap: 4px 16px; }
+  main { padding: 10px; }
+}
+
+/* forecast table */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-weight: 400; color: var(--muted); padding: 6px 10px;
+     border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 5px 10px; border-bottom: 1px solid var(--surface-2); vertical-align: middle; }
+tbody tr:hover td { background: var(--surface-2); }
+tbody tr.sel td { background: var(--surface-2); }
+tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+td.name { white-space: nowrap; }
+td.name a { color: var(--text); }
+td.name .eco { color: var(--faint); margin-left: 6px; }
+.prio { display: inline-block; min-width: 42px; text-align: right; font-weight: 700; }
+.band { display: inline-block; width: 8px; height: 8px; border-radius: 1px; margin-right: 6px; }
+.band.crit { background: var(--crit); } .band.high { background: var(--high); }
+.band.med { background: var(--med); } .band.low { background: var(--low); }
+.lbar { display: flex; align-items: center; gap: 8px; }
+.lbar .track { flex: 1; height: 6px; background: var(--surface-2); border-radius: 1px; min-width: 70px; }
+.lbar .fill { height: 100%; background: var(--blue); border-radius: 1px; }
+.exp-unknown { color: var(--muted); text-decoration: underline dashed var(--faint); text-underline-offset: 3px; }
+.exp-none { color: var(--faint); }
+.exp-declared { color: var(--muted); }
+.delta.up { color: var(--crit); } .delta.down { color: var(--muted); }
+td.driver { color: var(--muted); max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* detail */
+.detail { padding: 12px 14px; }
+.detail h3 { margin: 0 0 2px; font-size: 15px; }
+.big { font-size: 30px; font-weight: 700; line-height: 1.1; }
+.formula { color: var(--muted); margin: 4px 0 12px; }
+.terms { display: grid; grid-template-columns: 76px 1fr 44px; gap: 4px 10px; align-items: center; margin-bottom: 14px; }
+.terms .track { height: 8px; background: var(--surface-2); border-radius: 1px; }
+.terms .fill { height: 100%; background: var(--blue); border-radius: 1px; }
+.terms .fill.prior { background: var(--med); }
+.rate { margin: -8px 0 12px; }
+.rate + .rate { margin-top: -10px; }
+.sect { margin: 14px 0 6px; color: var(--muted); }
+.kv { display: grid; grid-template-columns: 120px 1fr; gap: 2px 10px; }
+.drivers { list-style: none; margin: 0; padding: 0; }
+.drivers li { padding: 6px 0; border-bottom: 1px solid var(--surface-2); }
+.drivers .meta { color: var(--faint); font-size: 11.5px; }
+.drivers .ev { color: var(--muted); }
+.kind-spillover { color: var(--blue); }
+.kind-inherited { color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { border: 1px solid var(--line); border-radius: var(--r); padding: 0 6px; color: var(--muted); }
+
+/* spillover grid: the one bold element */
+.grid-wrap { padding: 12px 14px; overflow-x: auto; }
+.sgrid { display: grid; gap: 3px; align-items: end; }
+.sgrid .colh { writing-mode: vertical-rl; transform: rotate(180deg); color: var(--muted);
+               padding: 4px 0; height: 128px; white-space: nowrap; overflow: hidden; }
+.sgrid .rowh { color: var(--text); padding-right: 10px; white-space: nowrap; align-self: center; }
+.sgrid .rowh .heat { display: inline-block; height: 4px; background: var(--accent); vertical-align: middle;
+                     margin-left: 8px; border-radius: 1px; }
+.sgrid .cell { height: 22px; border-radius: 2px; background: var(--surface-2); }
+.sgrid .cell.on { background: var(--blue); }
+.sgrid .cell.origin { box-shadow: inset 0 0 0 2px var(--accent); }
+.legend { display: flex; gap: 18px; color: var(--muted); padding: 0 14px 12px; }
+.legend i { display: inline-block; width: 14px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+.health td.fail { color: var(--crit); }
+.health td.ok { color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }</style>
+
+</head>
+<body>
+
+<header class="bar">
+  <div class="mark"><span class="b">Un</span><span class="a">KEV</span></div>
+  <div class="stats">
+    <span class="muted">analyst view</span>
+    <span>scored <b>just now</b></span>
+    <span>signals, 30 days <b>18</b></span>
+    <a href="/">Executive view</a>
+  </div>
+  <div class="spacer"></div>
+  <span id="run-status"></span>
+  <button class="btn" hx-post="/run/score" hx-target="#run-status">Rescore</button>
+  <button class="btn primary" hx-post="/run/all" hx-target="#run-status">Run full update</button>
+</header>
+
+<main>
+  <section class="panel brief" aria-labelledby="brief-h">
+    <h2 id="brief-h">Today's brief
+      <span class="muted">sample, not generated, just now</span></h2>
+    
+      <div class="body">Sample brief, hand-written for the demo. The live one is generated by Claude from the scored data.
+
+PHP leads on both axes. Two CVSS 9.2 pre-auth RCEs (PHP2Shell) shipped as an emergency release after the embargo leaked; attempts were seen from Oct 17, before the patch, and a working ASLR-bypass exploit is reported against unpatched 8.4 <span class="tag verified">verified: seed</span>. A third RCE path, CVE-2026-115560 via session upload progress, is not fixed by the Oct 21 releases; set session.upload_progress.enabled=0 until the regular release <span class="tag verified">verified: seed</span>. 7 hosts run PHP, 2 internet-facing, and the fixture shows 7.4.x, which has only minimal source backports from the PHP team (no official release); distro and LTS vendors, cPanel and Plesk ship builds.
+
+PAN-OS and Panorama inherit PHP2Shell: all PAN-OS 10.2-12.2 and every Panorama version are affected, no fix ETA <span class="tag verified">verified: seed</span>. That catalog edge is unconfirmed until someone reads the vendor advisory; treat the inherited term as provisional and restrict the management interface now <span class="tag inferred">inferred</span>.
+
+Node.js moved on four high-severity fixes. The IP-canonicalization pair is the forecast signal: alternate IPv4 spellings and full-width digits bypass TLS hostname checks <span class="tag verified">verified: seed</span>. curl and CPython share that surface <span class="tag inferred">inferred</span>.
+
+zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see bundled libraries <span class="tag inferred">inferred</span>.
+
+- Patch PHP to 8.2.35+ on the two internet-facing hosts; apply the INI mitigation everywhere.
+- Restrict PAN-OS and Panorama management to the admin network; confirm the advisory and flip the catalog edge.
+- Upgrade Node 18.x hosts; 18 is outside the patched lines.</div>
+    
+  </section>
+
+  <div class="split" id="forecast">
+    <section class="panel" aria-labelledby="fc-h">
+      <h2 id="fc-h">Forecast <span class="muted">ranked by priority: likelihood scaled by your estate's exposure</span></h2>
+      
+      <div class="scroll-x"><table>
+        <thead><tr>
+          <th class="num">#</th><th>Component</th><th class="num">Priority</th>
+          <th>Likelihood</th><th>Exposure</th><th class="num">7d</th><th>Top driver</th>
+        </tr></thead>
+        <tbody>
+        
+          <tr class="sel">
+            <td class="num muted">1</td>
+            <td class="name"><a href="?c=php" hx-get="/analyst?c=php"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">PHP</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">41.9</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 65.8%"></div></div>
+                <span class="num">66</span></div></td>
+            <td class="exp-known">
+              7 hosts, 2 ext
+            </td>
+            <td class="num"><span class="delta up">+24.3</span>
+              </td>
+            <td class="driver">CVE-2026-109618 (emergency, PoC public, embargo broke, exploitation attempts)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">2</td>
+            <td class="name"><a href="?c=cisco-asyncos" hx-get="/analyst?c=cisco-asyncos"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Cisco Secure Email (AsyncOS)</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">37.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 55.0%"></div></div>
+                <span class="num">55</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">Exploited Secure Email Gateway flaw allowing root command ex (emergency, exploitation confirmed)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">3</td>
+            <td class="name"><a href="?c=windows" hx-get="/analyst?c=windows"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Microsoft Windows</a><span class="eco">os</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">36.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 57.9%"></div></div>
+                <span class="num">58</span></div></td>
+            <td class="exp-known">
+              40 hosts
+            </td>
+            <td class="num"><span class="delta down">-3.3</span>
+              </td>
+            <td class="driver">CVE-2026-96951 (KEV)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">4</td>
+            <td class="name"><a href="?c=ivanti-ics" hx-get="/analyst?c=ivanti-ics"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Ivanti Connect Secure</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">35.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 52.3%"></div></div>
+                <span class="num">52</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+0.9</span>
+              </td>
+            <td class="driver">CISA pushed immediate remediation of an exploited Connect Se (exploitation confirmed)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">5</td>
+            <td class="name"><a href="?c=f5-bigip" hx-get="/analyst?c=f5-bigip"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">F5 BIG-IP</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">30.6</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 45.4%"></div></div>
+                <span class="num">45</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+15.9</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in F5 BIG-IP (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">6</td>
+            <td class="name"><a href="?c=panos" hx-get="/analyst?c=panos"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Palo Alto PAN-OS</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band med"></span><span class="prio">30.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 72.9%"></div></div>
+                <span class="num">73</span></div></td>
+            <td class="exp-declared">
+              1 hosts (declared)
+            </td>
+            <td class="num"><span class="delta up">+7.3</span>
+              </td>
+            <td class="driver">Exploited PAN-OS RCE zero-day patched the same week as Patch (emergency, exploitation confirmed)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">7</td>
+            <td class="name"><a href="?c=cisco-expressway" hx-get="/analyst?c=cisco-expressway"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Cisco Expressway</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">28.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 42.5%"></div></div>
+                <span class="num">42</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+17.2</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Cisco Expressway (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">8</td>
+            <td class="name"><a href="?c=netscaler" hx-get="/analyst?c=netscaler"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Citrix NetScaler ADC/Gateway</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">22.5</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 40.4%"></div></div>
+                <span class="num">40</span></div></td>
+            <td class="exp-declared">
+              2 hosts, 2 ext (declared)
+            </td>
+            <td class="num"><span class="delta up">+10.3</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Citrix NetScaler ADC/Gateway (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">9</td>
+            <td class="name"><a href="?c=nodejs" hx-get="/analyst?c=nodejs"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Node.js</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">21.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.6%"></div></div>
+                <span class="num">42</span></div></td>
+            <td class="exp-known">
+              9 hosts, 1 ext
+            </td>
+            <td class="num"><span class="delta up">+10.3</span>
+              </td>
+            <td class="driver">CVE-2026-111497</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">10</td>
+            <td class="name"><a href="?c=libarchive" hx-get="/analyst?c=libarchive"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libarchive</a><span class="eco">archive</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">21.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 31.1%"></div></div>
+                <span class="num">31</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">CVE-2026-69639</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">11</td>
+            <td class="name"><a href="?c=fortios" hx-get="/analyst?c=fortios"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Fortinet FortiOS</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">17.5</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 25.9%"></div></div>
+                <span class="num">26</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+2.8</span>
+              </td>
+            <td class="driver">mgmt-plane broke in Palo Alto PAN-OS (no CVE)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">12</td>
+            <td class="name"><a href="?c=curl" hx-get="/analyst?c=curl"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">curl / libcurl</a><span class="eco">client-lib</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">17.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.8%"></div></div>
+                <span class="num">34</span></div></td>
+            <td class="exp-known">
+              25 hosts
+            </td>
+            <td class="num"><span class="delta up">+2.1</span>
+              </td>
+            <td class="driver">CVE-2026-19931</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">13</td>
+            <td class="name"><a href="?c=nginx" hx-get="/analyst?c=nginx"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">nginx</a><span class="eco">web-server</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">16.2</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 27.1%"></div></div>
+                <span class="num">27</span></div></td>
+            <td class="exp-known">
+              6 hosts, 2 ext
+            </td>
+            <td class="num"><span class="delta up">+4.7</span>
+              </td>
+            <td class="driver">compression broke in Node.js (CVE-2026-111497)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">14</td>
+            <td class="name"><a href="?c=zlib" hx-get="/analyst?c=zlib"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">zlib</a><span class="eco">compression</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">15.4</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.8%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+1.9</span>
+              </td>
+            <td class="driver">compression broke in Node.js (CVE-2026-111497)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">15</td>
+            <td class="name"><a href="?c=xz" hx-get="/analyst?c=xz"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">XZ Utils</a><span class="eco">compression</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">15.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.6%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+0.9</span>
+              </td>
+            <td class="driver">archive broke in Microsoft Windows (CVE-2026-69639)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">16</td>
+            <td class="name"><a href="?c=brotli" hx-get="/analyst?c=brotli"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Brotli</a><span class="eco">compression</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">14.9</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.1%"></div></div>
+                <span class="num">22</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+1.9</span>
+              </td>
+            <td class="driver">compression broke in Node.js (CVE-2026-111497)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">17</td>
+            <td class="name"><a href="?c=glibc" hx-get="/analyst?c=glibc"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">glibc</a><span class="eco">system-lib</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">14.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 21.8%"></div></div>
+                <span class="num">22</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+3.4</span>
+              </td>
+            <td class="driver">dns broke in Node.js (CVE-2026-105482)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">18</td>
+            <td class="name"><a href="?c=libwebp" hx-get="/analyst?c=libwebp"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libwebp</a><span class="eco">codec</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">14.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.9%"></div></div>
+                <span class="num">21</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">image-codec broke in Next.js (CVE-2026-96889)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">19</td>
+            <td class="name"><a href="?c=c-ares" hx-get="/analyst?c=c-ares"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">c-ares</a><span class="eco">dns-lib</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">13.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.5%"></div></div>
+                <span class="num">20</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+1.9</span>
+              </td>
+            <td class="driver">dns broke in Node.js (CVE-2026-105482)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">20</td>
+            <td class="name"><a href="?c=zstd" hx-get="/analyst?c=zstd"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Zstandard</a><span class="eco">compression</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">13.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.5%"></div></div>
+                <span class="num">20</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+1.9</span>
+              </td>
+            <td class="driver">compression broke in Node.js (CVE-2026-111497)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">21</td>
+            <td class="name"><a href="?c=symantec-sepm" hx-get="/analyst?c=symantec-sepm"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Symantec Endpoint Protection Manager</a><span class="eco">mgmt-server</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">13.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 34.9%"></div></div>
+                <span class="num">35</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+7.1</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Symantec Endpoint Protection Manager (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">22</td>
+            <td class="name"><a href="?c=cb-app-control" hx-get="/analyst?c=cb-app-control"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Carbon Black App Control Server</a><span class="eco">mgmt-server</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">12.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.2%"></div></div>
+                <span class="num">33</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+6.8</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Carbon Black App Control Server (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">23</td>
+            <td class="name"><a href="?c=libxml2" hx-get="/analyst?c=libxml2"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libxml2</a><span class="eco">parser</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">12.4</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 18.3%"></div></div>
+                <span class="num">18</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver"></td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">24</td>
+            <td class="name"><a href="?c=expat" hx-get="/analyst?c=expat"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Expat</a><span class="eco">parser</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">12.4</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 18.3%"></div></div>
+                <span class="num">18</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver"></td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">25</td>
+            <td class="name"><a href="?c=openssl" hx-get="/analyst?c=openssl"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">OpenSSL</a><span class="eco">crypto-lib</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">11.5</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.8%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-known">
+              25 hosts
+            </td>
+            <td class="num"><span class="delta up">+1.4</span>
+              </td>
+            <td class="driver">tls-validation broke in Node.js (CVE-2026-105483)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">26</td>
+            <td class="name"><a href="?c=openssh" hx-get="/analyst?c=openssh"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">OpenSSH</a><span class="eco">remote-access</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">11.4</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 29.7%"></div></div>
+                <span class="num">30</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+1.4</span>
+              </td>
+            <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">27</td>
+            <td class="name"><a href="?c=sqlite" hx-get="/analyst?c=sqlite"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">SQLite</a><span class="eco">embedded-db</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">11.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 16.7%"></div></div>
+                <span class="num">17</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver"></td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">28</td>
+            <td class="name"><a href="?c=python" hx-get="/analyst?c=python"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">CPython</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">10.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 24.9%"></div></div>
+                <span class="num">25</span></div></td>
+            <td class="exp-known">
+              3 hosts
+            </td>
+            <td class="num"><span class="delta up">+1.2</span>
+              </td>
+            <td class="driver">archive broke in Microsoft Windows (CVE-2026-69639)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">29</td>
+            <td class="name"><a href="?c=apache-httpd" hx-get="/analyst?c=apache-httpd"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Apache HTTP Server</a><span class="eco">web-server</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">10.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 27.0%"></div></div>
+                <span class="num">27</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+2.7</span>
+              </td>
+            <td class="driver">http-parsing, multipart-upload broke in PHP (CVE-2026-109618)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">30</td>
+            <td class="name"><a href="?c=npm-fast-uri" hx-get="/analyst?c=npm-fast-uri"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">fast-uri (npm)</a><span class="eco">package</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">9.2</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 13.7%"></div></div>
+                <span class="num">14</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+2.7</span>
+              </td>
+            <td class="driver">ip-canonicalization broke in Node.js (CVE-2026-105483)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">31</td>
+            <td class="name"><a href="?c=squid" hx-get="/analyst?c=squid"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Squid</a><span class="eco">proxy</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">9.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 23.9%"></div></div>
+                <span class="num">24</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+1.0</span>
+              </td>
+            <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">32</td>
+            <td class="name"><a href="?c=nextjs" hx-get="/analyst?c=nextjs"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Next.js</a><span class="eco">framework</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.9%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">CVE-2026-96889</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">33</td>
+            <td class="name"><a href="?c=npm-ip-address" hx-get="/analyst?c=npm-ip-address"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">ip-address (npm)</a><span class="eco">package</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 13.1%"></div></div>
+                <span class="num">13</span></div></td>
+            <td class="exp-unknown">
+              unknown
+              
+            </td>
+            <td class="num"><span class="delta up">+1.8</span>
+              </td>
+            <td class="driver">ip-canonicalization broke in Node.js (CVE-2026-105483)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">34</td>
+            <td class="name"><a href="?c=perl" hx-get="/analyst?c=perl"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Perl</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.8%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+2.2</span>
+              </td>
+            <td class="driver">http-parsing, multipart-upload broke in PHP (CVE-2026-109618)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">35</td>
+            <td class="name"><a href="?c=haproxy" hx-get="/analyst?c=haproxy"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">HAProxy</a><span class="eco">proxy</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 21.0%"></div></div>
+                <span class="num">21</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+1.5</span>
+              </td>
+            <td class="driver">tls-validation broke in Node.js (CVE-2026-105483)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">36</td>
+            <td class="name"><a href="?c=imagemagick" hx-get="/analyst?c=imagemagick"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">ImageMagick</a><span class="eco">codec</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 19.2%"></div></div>
+                <span class="num">19</span></div></td>
+            <td class="exp-known">
+              1 hosts
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">image-codec broke in Next.js (CVE-2026-96889)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">37</td>
+            <td class="name"><a href="?c=ghostscript" hx-get="/analyst?c=ghostscript"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Ghostscript</a><span class="eco">parser</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">7.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 17.0%"></div></div>
+                <span class="num">17</span></div></td>
+            <td class="exp-known">
+              1 hosts
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver"></td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">38</td>
+            <td class="name"><a href="?c=openjdk" hx-get="/analyst?c=openjdk"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Java runtime</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">6.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 16.0%"></div></div>
+                <span class="num">16</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+1.4</span>
+              </td>
+            <td class="driver">tls-validation broke in Node.js (CVE-2026-105483)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">39</td>
+            <td class="name"><a href="?c=exchange" hx-get="/analyst?c=exchange"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Microsoft Exchange</a><span class="eco">mail</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">5.6</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 14.6%"></div></div>
+                <span class="num">15</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+0.6</span>
+              </td>
+            <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
+          </tr>
+        
+        </tbody>
+      </table></div>
+      
+    </section>
+
+    <section class="panel" id="detail" aria-live="polite">
+      
+<div class="detail">
+  <h3>PHP</h3>
+  <div class="muted">runtime, rank 1</div>
+  <div class="big" style="margin-top: 10px"><span class="band med"></span>41.9</div>
+  <div class="formula">likelihood 65.8 × exposure factor 0.64</div>
+
+  <div class="terms">
+    
+      <span>prior</span>
+      <div class="track"><div class="fill prior" style="width: 100%"></div></div>
+      <span class="num">20.0</span>
+    
+      <span>activity</span>
+      <div class="track"><div class="fill activity" style="width: 98%"></div></div>
+      <span class="num">24.6</span>
+    
+      <span>spillover</span>
+      <div class="track"><div class="fill spillover" style="width: 45%"></div></div>
+      <span class="num">6.8</span>
+    
+      <span>inherited</span>
+      <div class="track"><div class="fill inherited" style="width: 0%"></div></div>
+      <span class="num">0.0</span>
+    
+      <span>exploit</span>
+      <div class="track"><div class="fill exploit" style="width: 58%"></div></div>
+      <span class="num">14.4</span>
+    
+  </div>
+  
+  
+    <div class="rate muted">baseline warming up</div>
+  
+
+  <div class="sect">Estate exposure</div>
+  <div class="kv">
+    <span class="muted">status</span><span class="exp-known">known</span>
+    
+      <span class="muted">hosts</span><span>7</span>
+      <span class="muted">internet-facing</span><span>2</span>
+      <span class="muted">critical</span><span>3</span>
+    
+    
+      <span class="muted">versions</span>
+      <span>8.3.35 (3), 8.2.34 (2), 7.4.33 (1)</span>
+    
+    
+      <span class="muted">declared</span>
+      <span>Demo Panorama, embedded, evidence: demo entry</span>
+    
+  </div>
+  
+
+  <div class="sect">Why it's ranked here</div>
+  
+  <ul class="drivers">
+    
+      <li>
+        <div class="kind-direct"><a href="https://socradar.io/blog/php2shell-cve-2026-109618-cve-2026-109619/" rel="noopener noreferrer" target="_blank">CVE-2026-109618 (emergency, PoC public, embargo broke, exploitation attempts)</a></div>
+        <div class="meta">direct, seed data, 2d ago</div>
+        <div class="ev">PHP2Shell: unauthenticated RCE via OOM corruption; fixed in 8.5.12/8.4.27/8.3.36/8.2.35; embargo leaked. Attempts seen from 2026-10-17 (Amazon), before the patch. VulnCheck reports a working ASLR-bypass exploit against u</div>
+      </li>
+    
+      <li>
+        <div class="kind-direct"><a href="https://labs.beazley.security/advisories/BSL-A1233" rel="noopener noreferrer" target="_blank">CVE-2026-109619 (emergency, PoC public, embargo broke, exploitation attempts)</a></div>
+        <div class="meta">direct, seed data, 2d ago</div>
+        <div class="ev">PHP2Shell: RCE via stale global state, session upload-progress path on mod_php and PHP-FPM. Attempts seen from 2026-10-17 (Amazon), before the patch. VulnCheck reports a working ASLR-bypass exploit against unpatched 8.4.</div>
+      </li>
+    
+      <li>
+        <div class="kind-direct"><a href="https://thehackernews.com/2026/10/urgent-php-warns-of-another-unpatched.html" rel="noopener noreferrer" target="_blank">CVE-2026-115560</a></div>
+        <div class="meta">direct, seed data, 13h ago</div>
+        <div class="ev">Third PHP RCE path: session upload progress plus runtime switch of serialize_handler to php before session_start(). Not fixed by the Oct 21 releases; fix in regular release. Mitigation: session.upload_progress.enabled=0.</div>
+      </li>
+    
+      <li>
+        <div class="kind-spillover"><a href="https://brandefense.io/security-news/next-js-node-js-security-updates-october-2026/" rel="noopener noreferrer" target="_blank">image-codec broke in Next.js (CVE-2026-96889)</a></div>
+        <div class="meta">spillover, seed data, 9d ago</div>
+        
+      </li>
+    
+      <li>
+        <div class="kind-spillover"><a href="https://senserva.com/patch-tuesday.html" rel="noopener noreferrer" target="_blank">archive broke in Microsoft Windows (CVE-2026-69639)</a></div>
+        <div class="meta">spillover, seed data, 10d ago</div>
+        
+      </li>
+    
+  </ul>
+  
+
+  <div class="sect">Attack surfaces</div>
+  <div class="chips"><span class="chip">http-parsing</span><span class="chip">multipart-upload</span><span class="chip">session-state</span><span class="chip">serialization</span><span class="chip">archive</span><span class="chip">image-codec</span></div>
+</div>
+    </section>
+
+    <section class="panel wide" aria-labelledby="ex-h">
+      <h2 id="ex-h">Exploited in the last 30 days
+        <span class="muted">CISA KEV and confirmed reports; includes products outside the catalog</span></h2>
+      
+      <div class="scroll-x"><table>
+        <thead><tr><th>Date</th><th>CVE</th><th>Vendor / product</th><th>Catalog component</th></tr></thead>
+        <tbody>
+          <tr><td class="muted">2026-10-14</td>
+            <td><span class="muted">no CVE</span></td>
+            <td class="driver" title="Exploited PAN-OS RCE zero-day patched the same week as Patch Tuesday (secondary…"><a href="https://tech-insider.org/microsoft-patch-tuesday-1413-cves-zero-day-2026/" rel="noopener noreferrer" target="_blank">Exploited PAN-OS RCE zero-day patched the same week as Patch Tuesday (secondary…</a></td>
+            <td>Palo Alto PAN-OS</td></tr>
+        
+          <tr><td class="muted">2026-10-14</td>
+            <td><span class="muted">no CVE</span></td>
+            <td class="driver" title="Exploited Secure Email Gateway flaw allowing root command execution (secondary…"><a href="https://tech-insider.org/microsoft-patch-tuesday-1413-cves-zero-day-2026/" rel="noopener noreferrer" target="_blank">Exploited Secure Email Gateway flaw allowing root command execution (secondary…</a></td>
+            <td>Cisco Secure Email (AsyncOS)</td></tr>
+        
+          <tr><td class="muted">2026-10-14</td>
+            <td><span class="muted">no CVE</span></td>
+            <td class="driver" title="CISA pushed immediate remediation of an exploited Connect Secure flaw…"><a href="https://tech-insider.org/microsoft-patch-tuesday-1413-cves-zero-day-2026/" rel="noopener noreferrer" target="_blank">CISA pushed immediate remediation of an exploited Connect Secure flaw…</a></td>
+            <td>Ivanti Connect Secure</td></tr>
+        
+          <tr><td class="muted">2026-10-13</td>
+            <td><a href="https://www.rapid7.com/blog/post/em-patch-tuesday-october-2026/" rel="noopener noreferrer" target="_blank">CVE-2026-96951</a>
+                </td>
+            <td class="driver" title="CVE-2026-96951">CVE-2026-96951</td>
+            <td>Microsoft Windows</td></tr>
+        </tbody>
+      </table></div>
+      
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="sp-h">
+    <h2 id="sp-h">Where breakage could spread
+      <span class="muted">attack surfaces hit in the last 30 days, and which catalog components share them</span></h2>
+    
+    <div class="grid-wrap">
+      <div class="sgrid" style="grid-template-columns: 230px repeat(14, 26px);">
+        <div></div>
+        <div class="colh" title="PHP">php</div><div class="colh" title="Node.js">nodejs</div><div class="colh" title="Palo Alto PAN-OS">panos</div><div class="colh" title="Microsoft Windows">windows</div><div class="colh" title="Cisco Secure Email (AsyncOS)">cisco-asyncos</div><div class="colh" title="curl / libcurl">curl</div><div class="colh" title="F5 BIG-IP">f5-bigip</div><div class="colh" title="Cisco Expressway">cisco-expressway</div><div class="colh" title="Ivanti Connect Secure">ivanti-ics</div><div class="colh" title="Next.js">nextjs</div><div class="colh" title="libarchive">libarchive</div><div class="colh" title="Citrix NetScaler ADC/Gateway">netscaler</div><div class="colh" title="Fortinet FortiOS">fortios</div><div class="colh" title="OpenSSH">openssh</div>
+        
+          <div class="rowh" title="session lifecycle, global/request state reuse across requests">session-state<span class="heat" style="width: 40px"></span></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 1.0"
+                   title="PHP / session-state: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 1.0"
+                   title="Citrix NetScaler ADC/Gateway / session-state: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="multipart/form-data, file upload handling, upload progress">multipart-upload<span class="heat" style="width: 40px"></span></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 1.0"
+                   title="PHP / multipart-upload: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="appliance management interfaces and admin APIs">mgmt-plane<span class="heat" style="width: 38px"></span></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.9624999999999999"
+                   title="Palo Alto PAN-OS / mgmt-plane: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.9624999999999999"
+                   title="Cisco Secure Email (AsyncOS) / mgmt-plane: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.9624999999999999"
+                   title="F5 BIG-IP / mgmt-plane: a signal hit here"></div>
+            
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.9624999999999999"
+                   title="Cisco Expressway / mgmt-plane: a signal hit here"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.9624999999999999"
+                   title="Ivanti Connect Secure / mgmt-plane: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.9624999999999999"
+                   title="Citrix NetScaler ADC/Gateway / mgmt-plane: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.9624999999999999"
+                   title="Fortinet FortiOS / mgmt-plane: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.9624999999999999"
+                   title="OpenSSH / mgmt-plane: shares this surface"></div>
+            
+          
+        
+          <div class="rowh" title="archive formats: zip, tar, rar, 7z, cab">archive<span class="heat" style="width: 26px"></span></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.745"
+                   title="PHP / archive: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.745"
+                   title="Microsoft Windows / archive: a signal hit here"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.745"
+                   title="Cisco Secure Email (AsyncOS) / archive: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.745"
+                   title="libarchive / archive: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="HTTP request/response parsing, headers, smuggling, keep-alive">http-parsing<span class="heat" style="width: 16px"></span></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.55"
+                   title="PHP / http-parsing: a signal hit here"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Node.js / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Palo Alto PAN-OS / http-parsing: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="curl / libcurl / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="F5 BIG-IP / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Cisco Expressway / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Ivanti Connect Secure / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Next.js / http-parsing: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Citrix NetScaler ADC/Gateway / http-parsing: shares this surface"></div>
+            
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="Fortinet FortiOS / http-parsing: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="IP/hostname normalization, alternate encodings, SSRF filter bypass">ip-canonicalization<span class="heat" style="width: 16px"></span></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.55"
+                   title="Node.js / ip-canonicalization: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="curl / libcurl / ip-canonicalization: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="certificate chain and hostname verification">tls-validation<span class="heat" style="width: 16px"></span></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.55"
+                   title="Node.js / tls-validation: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.55"
+                   title="curl / libcurl / tls-validation: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+          <div class="rowh" title="image decoding and transformation: webp, png, svg, tiff">image-codec<span class="heat" style="width: 14px"></span></div>
+          
+            
+            
+              <div class="cell on" style="opacity: 0.505"
+                   title="PHP / image-codec: shares this surface"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            
+              <div class="cell on origin" style="opacity: 0.505"
+                   title="Next.js / image-codec: a signal hit here"></div>
+            
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+            
+            <div class="cell" aria-hidden="true"></div>
+          
+        
+      </div>
+    </div>
+    <div class="legend">
+      <span><i style="background: var(--blue)"></i>shares the surface (brighter = hotter)</span>
+      <span><i style="background: var(--blue); box-shadow: inset 0 0 0 2px var(--accent)"></i>a signal already hit this component here</span>
+    </div>
+    
+  </section>
+
+  <div class="pair">
+    <div class="stack">
+      <section class="panel" aria-labelledby="um-h">
+        <h2 id="um-h">Not in the catalog <span class="muted">vulnerable tech mentioned in intel that nothing maps to</span></h2>
+        <p class="empty">Everything seen so far maps to a catalog component.</p>
+      </section>
+
+      <section class="panel" aria-labelledby="pe-h">
+        <h2 id="pe-h">Proposed dependency edges
+          <span class="muted">intel says a product bundles a catalog component. Claude proposes; a human edits components.yaml</span></h2>
+        <p class="empty">No proposed edges yet. They appear when extracted intel says a product is affected because it bundles another catalog component.</p>
+      </section>
+    </div>
+
+    <section class="panel health" aria-labelledby="fh-h">
+      <h2 id="fh-h">Feed health</h2>
+      
+      <table><thead><tr><th>Job</th><th>Last run</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>seed</td><td class="muted">just now</td>
+            <td class="ok">signals 18, inventory software_records 76 host_records 40 known 9 unknown 18</td></tr>
+        </tbody></table>
+      
+    </section>
+  </div>
+</main>
+
+</body>
+</html>

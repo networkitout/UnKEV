@@ -172,7 +172,8 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
                 label += " (unconfirmed edge)"
             drivers[host].append((contrib, {"kind": "inherited", "label": label, "url": s.get("url"),
                                             "origin": s.get("origin"), "observed_at": s["observed_at"],
-                                            "evidence": edge.get("evidence")}))
+                                            "evidence": edge.get("evidence"), "source": components[cid]["name"],
+                                            "cve": s.get("cve") or None, "confirmed": bool(edge.get("confirmed"))}))
 
         level = 1.0 if s.get("kev") else lv.get(s.get("exploitation") or "unknown", 0.0)
         if s.get("epss") is not None:
@@ -181,7 +182,10 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
         exploit[cid] = max(exploit[cid], e)
         drivers[cid].append((a + e, {"kind": "direct", "label": _label(s), "url": s.get("url"),
                                      "origin": s.get("origin"), "observed_at": s["observed_at"],
-                                     "evidence": s.get("evidence")}))
+                                     "evidence": s.get("evidence"), "cve": s.get("cve") or None,
+                                     "title": s.get("title"),
+                                     "flags": {k: bool(s.get(k)) for k in ("kev", "emergency", "poc_public", "embargo_broken")},
+                                     "exploitation": s.get("exploitation")}))
 
         surfaces = [x for x in s.get("surfaces") or [] if x in surf_index]
         if surfaces:
@@ -200,7 +204,8 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
                     "kind": "spillover",
                     "label": f"{', '.join(sorted(shared))} broke in {components[cid]['name']} ({s.get('cve') or 'no CVE'})",
                     "url": s.get("url"), "origin": s.get("origin"), "observed_at": s["observed_at"],
-                    "evidence": None}))
+                    "evidence": None, "source": components[cid]["name"], "surfaces": sorted(shared),
+                    "cve": s.get("cve") or None}))
 
     results = []
     for cid, c in components.items():
