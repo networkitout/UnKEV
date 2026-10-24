@@ -35,7 +35,7 @@ UNKEV_PASSWORD=change-me uvicorn app.main:app --port 8080
 
 ## Going live
 
-1. `cp .env.example .env`, then set `ANTHROPIC_API_KEY` and `UNKEV_PASSWORD`. `NVD_API_KEY` is optional but raises rate limits about 10x.
+1. `cp .env.example .env`, then set `ANTHROPIC_API_KEY` and `UNKEV_PASSWORD`. `NVD_API_KEY` is optional but raises rate limits about 10x (a 14-day NVD window is ~36k records; that's 5 minutes without a key, under 1 with). `UNKEV_EXTRACT_MODEL` and `UNKEV_BRIEF_MODEL` default to `claude-opus-5-5`; any model from `GET /v1/models` works.
 2. Point `config/inventory.yaml` at your inventory API and set `mode: api`. Then run `python -m scripts.inventory_probe` until every field resolves (see below).
 3. Verify each feed URL in `config/feeds.yaml`. They came from memory.
 4. Lock dependencies once with `./lock.sh`. It writes a hash-pinned `requirements.txt` using the same base image as the build.
@@ -128,7 +128,7 @@ Claude never writes catalog edges. When extracted intel says a product is affect
 Intel is untrusted input:
 
 - Documents are wrapped as data, with control characters stripped and `</document>` neutralized, so a document can't break out of its wrapper.
-- The extractor has exactly one tool, forced via `tool_choice`, with no web access or code execution.
+- The extractor has exactly one tool, `record_findings`, with no web access or code execution. `tool_choice` forces it on models that allow forcing; the 5.5 flagships (which think adaptively) reject that, so the call falls back to `auto` and any response without a `record_findings` call is discarded. The model is learned on first use.
 - Output is validated against the surface and exploitation enums, the catalog IDs, the batch item refs, a CVE regex, and CVSS bounds.
 - The brief is escaped before marker spans are added.
 - CSP is `script-src 'self'`.
@@ -158,12 +158,11 @@ python -m unittest discover -s tests -t . -v
 
 These came from memory and were not verified against live endpoints in this build:
 
-- feed URLs
-- NVD date format, `pub`/`lastMod` date parameter names, 120-day window limit and rate limits
+- feed URLs (all returned 200 on 2026-10-23. CISA's edge rejects bot user agents without a contact URL, which is why the default `UNKEV_UA` carries the repo link; keep one if you change it)
+- NVD `pub` date parameter name, 120-day window limit and rate limits (the `lastMod` window, date format and 2000-per-page paging worked live)
 - OSV `page_token` pagination and rate limits (the query endpoint and response shape were checked live on 2026-10-23)
 - CPE product names on the components added in 0.2 (`f5-bigip`, `cisco-expressway`, `symantec-sepm`, `cb-app-control`)
-- EPSS batch limits
-- Claude model IDs
+- EPSS batch limits (50 per request worked live)
 - inventory routes and fields (placeholders in `config/inventory.yaml`)
 
 ## Roadmap

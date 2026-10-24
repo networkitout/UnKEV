@@ -57,6 +57,12 @@ Half-lives: inherited 45 days (new); others unchanged.
 - Demo appliances gain a Panorama that embeds PHP.
 - The sample brief drops the false claim that PHP 7.4 gets no upstream fix (it has minimal source backports; distro and LTS vendors, cPanel and Plesk ship builds), and mentions CVE-2026-115560 and the unconfirmed PAN-OS edge.
 
+### Live-run fixes
+
+- The 5.5 flagship models reject forced `tool_choice`. The extractor now tries the forced tool first and falls back to `auto` per model, discarding any response that doesn't call `record_findings`; both jobs default to `claude-opus-5-5`. Extraction gets 8000 output tokens of headroom for adaptive thinking.
+- The brief sees all five stored drivers per component, so inherited drivers aren't crowded out by direct ones.
+- Default user agent carries the repo URL: CISA's edge returns 403 to bot agents without a contact link.
+
 ### Other
 
 - The inventory adapter is named for what it is: `app/inventory.py`, `config/inventory.yaml`, `scripts/inventory_probe.py`, `fixtures/inventory.json`, `INVENTORY_API_TOKEN`. It works against any CMDB or asset API returning per-host software/OS records.

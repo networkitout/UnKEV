@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import os
 import tempfile
 import types
@@ -263,6 +264,40 @@ class LLMBoundary(unittest.TestCase):
         self.assertNotIn("</document>", clean_doc(evil))
         _, msgs = build_extract_messages([{"ref": "d0", "title": "t", "text": evil, "source": "x"}], COMPS)
         self.assertEqual(msgs[0]["content"].count("</document>"), 1)
+
+    def test_forced_tool_falls_back_to_auto_per_model(self):
+        import asyncio
+        from app import llm
+
+        class Resp:
+            def __init__(self, status, body):
+                self.status_code, self.text = status, json.dumps(body)
+            def json(self):
+                return json.loads(self.text)
+
+        class Client:
+            calls: list[dict] = []
+            async def post(self, url, json=None, **kw):
+                self.calls.append(json["tool_choice"])
+                if json["tool_choice"]["type"] == "tool":
+                    return Resp(400, {"type": "error", "error": {"type": "invalid_request_error",
+                                      "message": 'tool_choice: type "tool" and "any" are not supported for this model.'}})
+                return Resp(200, {"content": [{"type": "thinking", "thinking": "..."},
+                                              {"type": "tool_use", "name": "record_findings",
+                                               "input": {"findings": [{"item_ref": "d0", "relevant": True, "components": ["php"],
+                                                                       "surfaces": [], "exploitation": "none", "emergency_release": False,
+                                                                       "poc_public": False, "embargo_broken": False, "confidence": 0.9}]}}],
+                                  "usage": {"input_tokens": 10, "output_tokens": 5}})
+
+        settings = types.SimpleNamespace(anthropic_api_key="k", anthropic_version="v", extract_model="fake-5-5")
+        llm._FORCE_OK.pop("fake-5-5", None)
+        items = [{"ref": "d0", "source": "x", "title": "t", "text": "PHP RCE"}]
+        findings, tin, tout = asyncio.run(llm.extract(Client(), settings, items, COMPS))
+        self.assertEqual([c["type"] for c in Client.calls], ["tool", "auto"])      # forced first, then fallback
+        self.assertEqual(findings[0]["components"], ["php"])
+        self.assertIs(llm._FORCE_OK["fake-5-5"], False)
+        asyncio.run(llm.extract(Client(), settings, items, COMPS))
+        self.assertEqual([c["type"] for c in Client.calls], ["tool", "auto", "auto"])   # remembered: no forced retry
 
     def test_brief_is_escaped(self):
         html = str(brief_html('<script>alert(1)</script> fine [verified: kev] guess [inferred] <img src=x onerror=1>'))

@@ -42,8 +42,9 @@ def get_settings() -> Settings:
         db_path=e("UNKEV_DB", str(ROOT / "unkev.db")),
         anthropic_api_key=e("ANTHROPIC_API_KEY"),
         anthropic_version=e("ANTHROPIC_VERSION", "2023-06-01"),
-        # Verify model IDs against https://docs.claude.com/en/docs/about-claude/models
-        extract_model=e("UNKEV_EXTRACT_MODEL", "claude-sonnet-5-5"),
+        # IDs checked against GET /v1/models on 2026-10-23. Any listed model works for
+        # extraction; ones that reject forced tool_choice fall back to auto (see llm.py).
+        extract_model=e("UNKEV_EXTRACT_MODEL", "claude-opus-5-5"),
         brief_model=e("UNKEV_BRIEF_MODEL", "claude-opus-5-5"),
         llm_daily_token_budget=int(e("UNKEV_LLM_DAILY_TOKENS", "400000")),
         llm_batch_size=int(e("UNKEV_LLM_BATCH", "8")),
@@ -51,7 +52,7 @@ def get_settings() -> Settings:
         dashboard_user=e("UNKEV_USER", "operator"),
         dashboard_password=e("UNKEV_PASSWORD"),
         http_timeout=float(e("UNKEV_HTTP_TIMEOUT", "30")),
-        user_agent=e("UNKEV_UA", "unkev/0.2 (+internal threat forecast)"),
+        user_agent=e("UNKEV_UA", "UnKEV/0.2 (+https://github.com/networkitout/UnKEV)"),
         inprocess_worker=e("UNKEV_INPROCESS_WORKER", "0") == "1",
         interval_minutes=int(e("UNKEV_INTERVAL_MIN", "60")),
     )
