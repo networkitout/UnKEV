@@ -57,6 +57,12 @@ Half-lives: inherited 45 days (new); others unchanged.
 - Demo appliances gain a Panorama that embeds PHP.
 - The sample brief drops the false claim that PHP 7.4 gets no upstream fix (it has minimal source backports; distro and LTS vendors, cPanel and Plesk ship builds), and mentions CVE-2026-115560 and the unconfirmed PAN-OS edge.
 
+### Running accuracy
+
+- `app/evaluation.py` judges each day's snapshot 30 days later under two outcome profiles (serious new flaw; exploited in the wild), against recency, prior and chance baselines, and by cohort: components whose score came only from spillover/inherited are the predictive-only picks whose outcome rate is the honest test of the map. Stored in `forecast_eval`; the nightly `evaluate` job keeps it current; `scripts/replay_eval.py` judges stored history so there are numbers on day one. Shown as a "Track record" panel on both views.
+- Description-fallback matching is off for PHP, Node.js, Perl, Apache httpd, nginx and Windows (`description_match: false`): 58% of all stored signals were application CVEs mentioning a runtime. Claude's surface tags now apply only to the components Claude named.
+- NVD page fetches retry transport errors as well as 5xx, with a 120 s page timeout.
+
 ### Executive view
 
 - `/` is now a leadership view: posture tiles, today's summary as readable paragraphs, the top ten risks with a plain-language *why now* and *our exposure* and a weekly trend, actively exploited items with an *in our estate?* answer, blind spots, and movers. Light theme, system font, every section titled, subtitled and ruled.

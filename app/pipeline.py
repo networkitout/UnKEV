@@ -14,6 +14,7 @@ from .collectors.osv import collect_osv
 from .collectors.rss import collect_rss
 from .config import get_settings, load_yaml
 from .db import DB, iso, utcnow
+from .evaluation import evaluate_snapshot
 from .inventory import sync_inventory
 from .matching import Matcher
 from .scoring import score_all, validate_config
@@ -189,6 +190,30 @@ async def job_score(ctx: Ctx):
     return job_score_sync(ctx)
 
 
+def job_evaluate_sync(ctx: Ctx) -> dict:
+    """Judge every daily snapshot whose horizon has elapsed and isn't judged yet."""
+    cfg = ctx.scoring["evaluation"]
+    horizon = int(cfg["horizon_days"])
+    due = ctx.db.daily_snapshots(iso(utcnow() - timedelta(days=horizon)))
+    done = ctx.db.evaluated_ts("live")
+    pending = [ts for ts in due if ts not in done]
+    if not pending:
+        return {"evaluated": 0, "total": len(due)}
+    signals = ctx.db.signals_until(iso(utcnow()))
+    n = 0
+    for ts in pending:
+        rows = ctx.db.snapshot_rows(ts)
+        if not rows:
+            continue
+        ctx.db.write_eval(evaluate_snapshot(rows, signals, datetime.fromisoformat(ts), cfg, ctx.components), "live")
+        n += 1
+    return {"evaluated": n, "total": len(due)}
+
+
+async def job_evaluate(ctx: Ctx):
+    return job_evaluate_sync(ctx)
+
+
 async def job_brief(ctx: Ctx):
     s = ctx.settings
     if not s.anthropic_api_key:
@@ -207,7 +232,7 @@ async def job_brief(ctx: Ctx):
 
 JOBS = {
     "collect": job_collect, "extract": job_extract, "enrich": job_enrich,
-    "inventory": job_inventory, "score": job_score, "brief": job_brief,
+    "inventory": job_inventory, "score": job_score, "evaluate": job_evaluate, "brief": job_brief,
 }
 
 
@@ -217,7 +242,7 @@ async def run(job: str) -> bool:
         return False
     async with _lock:
         ctx = Ctx()
-        order = ["collect", "extract", "enrich", "inventory", "score", "brief"] if job == "all" else [job]
+        order = ["collect", "extract", "enrich", "inventory", "score", "evaluate", "brief"] if job == "all" else [job]
         for name in order:
             if name in ("collect",):
                 await JOBS[name](ctx)          # records its own sub-runs

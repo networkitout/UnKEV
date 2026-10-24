@@ -60,3 +60,23 @@ exposure:
 
 # Signals older than this are ignored entirely. Must be >= activity_baseline.baseline_window_days.
 max_signal_age_days: 180
+
+# Running accuracy (app/evaluation.py). A monitor, not a training signal:
+# don't tune weights to it. Keep the outcome definition fixed so the series
+# stays comparable.
+evaluation:
+  horizon_days: 30         # a prediction at T is judged on (T, T+30]
+  k: 10                    # hit@k: did the event land in the top k?
+  # Each profile is judged separately. "New" means not known for that
+  # component before T: re-reports are not predictions coming true.
+  outcomes:
+    serious:               # a new CVE at or above min_cvss, or a new KEV listing / confirmed exploitation
+      min_cvss: 9.0
+      kev: true
+      confirmed: true
+    exploited:             # only KEV listings and confirmed exploitation: sparse, but what leadership cares about
+      min_cvss: 99
+      kev: true
+      confirmed: true
+  recency_window_days: 90  # the naive baseline: count of distinct CVEs in the prior 90 days
+  cohort_min_points: 5     # 'predictive' cohort: spillover+inherited >= this, no direct activity or exploit

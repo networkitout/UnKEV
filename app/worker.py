@@ -22,7 +22,7 @@ async def loop_forever():
     s = get_settings()
     db = DB(s.db_path)
     while True:
-        for job in ("collect", "extract", "enrich", "inventory", "score"):
+        for job in ("collect", "extract", "enrich", "inventory", "score", "evaluate"):
             await run(job)
         if brief_is_stale(db):
             await run("brief")

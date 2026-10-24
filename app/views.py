@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from markupsafe import Markup, escape
 
 from .db import iso, utcnow
+from .evaluation import summarize
 from .scoring import surface_heat
 from .vocab import SURFACE_LABELS, SURFACES
 
@@ -224,6 +225,8 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         e["component_names"] = [ctx.components.get(c, {}).get("name", c) for c in e["components"]]
     return {
         "exploited": exploited,
+        "record": track_record(ctx),
+        "evals": ctx.db.evals(since_iso=iso(utcnow() - timedelta(days=60)))[:30],
         "ts": ts, "ts_ago": ago(ts), "rows": rows, "sel": sel,
         "brief": dict(brief) if brief else None,
         "brief_ago": ago(brief["ts"]) if brief else None,
@@ -235,6 +238,35 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         "unknown_top": [r for r in unknown if r["rank"] <= 15],
         "ago": ago,
     }
+
+
+def pct(v: float | None) -> str:
+    return "n/a" if v is None else f"{round(100 * v)}%"
+
+
+def track_record(ctx, days: int = 90) -> dict:
+    """How the forecast has fared over the last N judged days, in plain terms."""
+    evals = ctx.db.evals(since_iso=iso(utcnow() - timedelta(days=days + 30)))
+    s = summarize(evals)
+    if not s.get("n"):
+        return {"n": 0}
+    k = evals[0].get("k", 10)
+    out = {"n": s["n"], "first": s["first"], "last": s["last"], "k": k,
+           "replayed": "replay" in s["sources"], "live_days": sum(1 for e in evals if e["source"] == "live"),
+           "profiles": {}}
+    for name, p in s["profiles"].items():
+        r, c = p["rankings"], p["cohorts"]
+        out["profiles"][name] = {
+            "events": p["distinct_events"],
+            "model": pct(r["model"]["hit_at_k"]), "recency": pct(r["recency"]["hit_at_k"]),
+            "chance": pct(r["chance"]["hit_at_k"]),
+            "lift": p["lift_vs_recency"],
+            "lift_word": ("beats" if p["lift_vs_recency"] > 0.02 else "trails" if p["lift_vs_recency"] < -0.02 else "matches")
+                         if p["lift_vs_recency"] is not None else None,
+            "predictive": c["predictive"], "quiet": c["quiet"], "active": c["active"],
+            "predictive_pct": pct(c["predictive"]["rate"]), "quiet_pct": pct(c["quiet"]["rate"]),
+        }
+    return out
 
 
 def exec_context(ctx, top_n: int = 10) -> dict:
@@ -262,6 +294,7 @@ def exec_context(ctx, top_n: int = 10) -> dict:
     return {
         "ts": ts, "ts_ago": ago(ts),
         "grid": spill_grid(ctx, rows, signals, max_surfaces=8, max_cols=12),
+        "record": track_record(ctx),
         "kpis": {
             "high": sum(1 for r in rows if r["band"] in ("crit", "high")),
             "crit": sum(1 for r in rows if r["band"] == "crit"),

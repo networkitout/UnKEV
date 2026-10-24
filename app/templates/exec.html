@@ -68,6 +68,42 @@
     {% else %}<p class="empty">No surface-tagged activity in the last 30 days. Surfaces come from Claude's extraction of news and high-severity CVEs.</p>{% endif %}
   </section>
 
+  <section class="sec record" id="record" aria-labelledby="tr-h">
+    <header>
+      <h2 id="tr-h">Track record</h2>
+      <p>How the forecast has actually fared. Each day's top {{ record.k|default(10) }} is judged 30 days later against what happened, and always against the naive alternative of ranking by recent CVE count.{% if record.n and record.replayed %} Days before the live system existed are replayed from stored history.{% endif %}</p>
+    </header>
+    {% if record.n %}
+    <div class="rec-grid">
+      {% for name, p in record.profiles.items() %}
+      <div class="rec">
+        <div class="k">{% if name == 'exploited' %}Exploited in the wild{% else %}Serious new flaws{% endif %}
+          <span class="muted">{{ p.events }} events, {{ record.n }} judged days</span></div>
+        <div class="rec-main">
+          <div class="big">{{ p.model }}</div>
+          <div class="txt">of events landed in our top {{ record.k }}<br>
+            <span class="muted">ranking by recent CVE count: {{ p.recency }} · chance: {{ p.chance }}</span></div>
+        </div>
+        <div class="verdict {{ p.lift_word }}">
+          {% if p.lift_word == 'beats' %}Beats the naive baseline by {{ (100 * p.lift)|round|int }} points
+          {% elif p.lift_word == 'trails' %}Trails the naive baseline by {{ (100 * -p.lift)|round|int }} points
+          {% elif p.lift_word == 'matches' %}No better than the naive baseline
+          {% else %}Not enough events to compare{% endif %}
+        </div>
+        <div class="cohort">
+          <span class="k">Predictive picks</span>
+          {% if p.predictive.n %}
+            Components flagged only by spread or bundling, with no direct activity: <b>{{ p.predictive.hits }} of {{ p.predictive.n }}</b> ({{ p.predictive_pct }}) went on to have an event, against {{ p.quiet_pct }} of quiet components.
+          {% else %}No predictive-only picks in this period.{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">Nothing judged yet. The first day's forecast is judged 30 days after it was made; run <code>python -m scripts.replay_eval</code> to judge stored history now.</p>
+    {% endif %}
+  </section>
+
   <details class="sec fold" id="summary">
     <summary>
       <div>

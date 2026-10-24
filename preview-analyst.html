@@ -243,12 +243,12 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=windows" hx-get="/analyst?c=windows"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Microsoft Windows</a><span class="eco">os</span></td>
             <td class="num"><span class="band med"></span><span class="prio">36.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 57.9%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 57.8%"></div></div>
                 <span class="num">58</span></div></td>
             <td class="exp-known">
               40 hosts
             </td>
-            <td class="num"><span class="delta down">-3.3</span>
+            <td class="num"><span class="delta down">-3.2</span>
               </td>
             <td class="driver">CVE-2026-96951 (KEV)</td>
           </tr>
@@ -295,7 +295,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="exp-declared">
               1 hosts (declared)
             </td>
-            <td class="num"><span class="delta up">+7.3</span>
+            <td class="num"><span class="delta up">+7.4</span>
               </td>
             <td class="driver">Exploited PAN-OS RCE zero-day patched the same week as Patch (emergency, exploitation confirmed)</td>
           </tr>
@@ -333,21 +333,6 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
         
           <tr class="">
             <td class="num muted">9</td>
-            <td class="name"><a href="?c=nodejs" hx-get="/analyst?c=nodejs"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Node.js</a><span class="eco">runtime</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">21.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.6%"></div></div>
-                <span class="num">42</span></div></td>
-            <td class="exp-known">
-              9 hosts, 1 ext
-            </td>
-            <td class="num"><span class="delta up">+10.3</span>
-              </td>
-            <td class="driver">CVE-2026-111497</td>
-          </tr>
-        
-          <tr class="">
-            <td class="num muted">10</td>
             <td class="name"><a href="?c=libarchive" hx-get="/analyst?c=libarchive"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libarchive</a><span class="eco">archive</span></td>
             <td class="num"><span class="band low"></span><span class="prio">21.0</span></td>
@@ -359,6 +344,21 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             </td>
             <td class="num"><span class="muted">0</span></td>
             <td class="driver">CVE-2026-69639</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">10</td>
+            <td class="name"><a href="?c=nodejs" hx-get="/analyst?c=nodejs"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Node.js</a><span class="eco">runtime</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">20.9</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.5%"></div></div>
+                <span class="num">42</span></div></td>
+            <td class="exp-known">
+              9 hosts, 1 ext
+            </td>
+            <td class="num"><span class="delta up">+10.2</span>
+              </td>
+            <td class="driver">CVE-2026-111497</td>
           </tr>
         
           <tr class="">
@@ -890,7 +890,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
     
       <li>
         <div class="kind-direct"><a href="https://thehackernews.com/2026/10/urgent-php-warns-of-another-unpatched.html" rel="noopener noreferrer" target="_blank">CVE-2026-115560</a></div>
-        <div class="meta">direct, seed data, 13h ago</div>
+        <div class="meta">direct, seed data, 14h ago</div>
         <div class="ev">Third PHP RCE path: session upload progress plus runtime switch of serialize_handler to php before session_start(). Not fixed by the Oct 21 releases; fix in regular release. Mitigation: session.upload_progress.enabled=0.</div>
       </li>
     
@@ -1418,6 +1418,11 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
     
   </section>
 
+  <section class="panel" aria-labelledby="tr-h">
+    <h2 id="tr-h">Track record <span class="muted">each day's top 10 judged 30 days later; model vs recency vs chance, and the predictive-only cohort</span></h2>
+    <p class="empty">Nothing judged yet. Run python -m scripts.replay_eval to judge stored history.</p>
+  </section>
+
   <div class="pair">
     <div class="stack">
       <section class="panel" aria-labelledby="um-h">
@@ -1438,7 +1443,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
       <table><thead><tr><th>Job</th><th>Last run</th><th>Result</th></tr></thead>
         <tbody>
           <tr><td>seed</td><td class="muted">just now</td>
-            <td class="ok">signals 18, inventory software_records 76 host_records 40 known 9 unknown 18</td></tr>
+            <td class="ok">signals 18, inventory mode fixture software_records 76 host_records 40 known 9 unknown 18</td></tr>
         </tbody></table>
       
     </section>

@@ -144,6 +144,27 @@ Intel is untrusted input:
 
 Tests in `tests/test_core.py` cover the wrapper escape, schema stripping and XSS cases.
 
+## Track record (running accuracy)
+
+The forecast is judged against what actually happened, continuously. Each day's first snapshot is scored 30 days later: did the components in its top 10 go on to have an event? Two outcome profiles are judged separately because their base rates differ by an order of magnitude:
+
+- **serious**: a CVE ≥ 9.0 not previously known for that component, or a new KEV listing / confirmed exploitation
+- **exploited**: KEV listings and confirmed exploitation only
+
+Every number sits next to three baselines, because an absolute hit rate means nothing: **recency** (rank by distinct CVEs in the prior 90 days: the naive thing to do), **prior** (structural prior alone) and **chance** (k/N). The headline is the lift over recency.
+
+The honest test of the predictive terms is the **predictive-only cohort**: components that had spillover or inherited points at snapshot time but no direct activity or exploitation evidence. If their outcome rate doesn't beat quiet components, the map is decoration. The executive view shows this in words; the analyst view shows the per-day table.
+
+The nightly `evaluate` job judges snapshots as their horizon elapses. To get numbers before the live system is a month old:
+
+```bash
+python -m scripts.replay_eval --days 365
+```
+
+replays stored history day by day (rescoring with only what was known on each day) and stores results as `replay`; a live judgement for the same day takes precedence once it exists. Replay caveats: surface tags mostly exist on recent signals (spillover under-represented), EPSS is stripped (its values are current, not as-of), and the activity baseline needs 150 days of NVD history before a replayed day runs with β > 0, so backfill a year first.
+
+Configuration is in `scoring.yaml` under `evaluation`. Keep the outcome definitions fixed so the series stays comparable, and **don't tune weights to this**: it's a monitor, not a training signal.
+
 ## Backtest
 
 ```bash

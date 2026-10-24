@@ -381,6 +381,7 @@ class ExecutiveView(unittest.TestCase):
             x = exec_context(ctx)
             self.assertIn("grid", x)
             self.assertTrue(all("label" in s for s in x["grid"]["surfaces"]))
+            self.assertEqual(x["record"], {"n": 0})                          # nothing judged yet
             self.assertEqual(x["kpis"]["exploited"], 1)
             self.assertEqual(x["kpis"]["exploited_us"], 1)                  # windows is in inventory
             self.assertEqual(x["exploited"][0]["estate"], "Yes, 40 hosts")
@@ -520,8 +521,11 @@ class Pipeline(unittest.TestCase):
 
         class Client:
             statuses = [503, 503, 200]
-            async def get(self, url, params=None, headers=None):
-                return Resp(self.statuses.pop(0))
+            async def get(self, url, params=None, headers=None, timeout=None):
+                nxt = self.statuses.pop(0)
+                if isinstance(nxt, Exception):
+                    raise nxt
+                return Resp(nxt)
 
         with mock.patch.object(nvd.asyncio, "sleep", mock.AsyncMock()) as slept:
             r = asyncio.run(nvd._get_page(Client(), "u", {}, {}))
@@ -534,6 +538,10 @@ class Pipeline(unittest.TestCase):
         Client.statuses = [404]
         with self.assertRaises(RuntimeError):
             asyncio.run(nvd._get_page(Client(), "u", {}, {}))                       # 4xx is not retried
+        import httpx
+        Client.statuses = [httpx.ReadTimeout("slow"), 200]
+        with mock.patch.object(nvd.asyncio, "sleep", mock.AsyncMock()):
+            self.assertEqual(asyncio.run(nvd._get_page(Client(), "u", {}, {})).status_code, 200)   # timeouts retry too
 
     def test_nvd_window_guard(self):
         import asyncio
@@ -622,6 +630,98 @@ class OSV(unittest.TestCase):
         self.assertEqual(inv["npm-fast-uri"]["status"], "unknown")
         r = by_id(score_all(COMPS, [sig("npm-ip-address", surfaces=["ip-canonicalization"])], {}, CFG, NOW))
         self.assertGreater(r["curl"]["points"]["spillover"], 0)      # package activity spills to shared surfaces
+
+
+class Evaluation(unittest.TestCase):
+    ECFG = CFG["evaluation"]
+    T = datetime(2026, 9, 1, tzinfo=timezone.utc)
+
+    def at(self, days, **kw):
+        s = sig(kw.pop("cid", "php"), **kw)
+        s["observed_at"] = (self.T + timedelta(days=days)).isoformat()
+        return s
+
+    def test_outcomes_count_only_what_is_new(self):
+        from app.evaluation import outcome_events, seen_before
+        sigs = [
+            self.at(-10, cve="CVE-OLD", cvss=9.8),                                  # known before T
+            self.at(5, cve="CVE-OLD", cvss=9.8),                                    # re-report: not an event
+            self.at(6, cve="CVE-OLD", cvss=9.8, kev=True),                          # but entering KEV is
+            self.at(7, cve="CVE-NEW", cvss=9.5),                                    # new severe CVE: event
+            self.at(8, cve="CVE-NEW", cvss=9.5),                                    # duplicate in window: once
+            self.at(9, cve="CVE-MILD", cvss=7.0),                                   # not severe
+            self.at(10, cid="curl", cve="", exploitation="confirmed", cvss=None),   # no-CVE confirmed: event
+            self.at(40, cve="CVE-LATE", cvss=9.9),                                  # outside horizon
+        ]
+        known, exploited = seen_before(sigs, self.T)
+        self.assertEqual(known, {("php", "CVE-OLD")})
+        self.assertEqual(exploited, set())
+        ev = outcome_events(sigs, self.T, self.T + timedelta(days=30), known, exploited, self.ECFG["outcomes"]["serious"])
+        self.assertEqual({k: sorted(e["kind"] for e in v) for k, v in ev.items()},
+                         {"php": ["exploited", "severe"], "curl": ["exploited"]})
+        self.assertEqual({e["cve"] for e in ev["php"]}, {"CVE-OLD", "CVE-NEW"})
+
+    def test_cohorts_and_baselines(self):
+        from app.evaluation import evaluate_snapshot
+        # At T: php has direct activity; panos only inherits from php; nginx has nothing.
+        before = [self.at(-3, cve="CVE-A", cvss=9.0)]
+        rows = score_all(COMPS, before, {}, CFG, self.T)
+        by = {r["component_id"]: r for r in rows}
+        self.assertGreater(by["panos"]["points"]["inherited"], 0)
+        self.assertEqual(by["panos"]["points"]["activity"], 0)
+        after = [self.at(10, cid="panos", cve="CVE-P", cvss=9.3),      # the inherited prediction comes true
+                 self.at(12, cid="nginx", cve="CVE-N", cvss=9.1)]      # a quiet component breaks too
+        full = evaluate_snapshot(rows, before + after, self.T, self.ECFG, COMPS)
+        self.assertEqual(set(full["profiles"]), {"serious", "exploited"})
+        self.assertEqual(full["profiles"]["exploited"]["event_components"], [])      # nothing was exploited
+        res = full["profiles"]["serious"]
+        self.assertEqual(res["event_components"], ["nginx", "panos"])
+        self.assertEqual(res["event_keys"], ["nginx:CVE-N", "panos:CVE-P"])
+        c = res["cohorts"]
+        self.assertIn("panos", c["predictive"]["components"])
+        self.assertEqual(c["predictive"]["hits"], 1)
+        self.assertIn("nginx", c["quiet"]["components"])
+        self.assertIn("php", c["active"]["components"])
+        m = res["metrics"]
+        self.assertEqual(set(m), {"model", "recency", "prior", "chance"})
+        self.assertAlmostEqual(m["chance"]["hit_at_k"], 10 / len(rows))
+        self.assertIsNotNone(m["model"]["hit_at_k"])
+        self.assertEqual(m["model"]["precision_at_k"], len({"nginx", "panos"} & set(
+            r["component_id"] for r in sorted(rows, key=lambda r: -r["likelihood"])[:10])) / 10)
+
+    def test_summarize_and_lift(self):
+        from app.evaluation import summarize
+        def day(ts, keys, model_hit, rec_hit, pred):
+            return {"ts": ts, "source": "replay", "profiles": {"serious": {
+                "event_keys": keys, "event_components": sorted({k.split(":")[0] for k in keys}),
+                "metrics": {"model": {"hit_at_k": model_hit, "precision_at_k": .2}, "recency": {"hit_at_k": rec_hit, "precision_at_k": .1},
+                            "prior": {"hit_at_k": 0, "precision_at_k": 0}, "chance": {"hit_at_k": .25, "precision_at_k": .05}},
+                "cohorts": {"predictive": pred, "quiet": {"n": 20, "hits": 1}, "active": {"n": 5, "hits": 2}}}}}
+        evals = [day("2026-09-02T00:00:00+00:00", ["php:CVE-1", "curl:CVE-2"], 1.0, .5, {"n": 3, "hits": 1}),
+                 day("2026-09-01T00:00:00+00:00", ["php:CVE-1"], None, None, {"n": 1, "hits": 0})]   # same event, overlapping window
+        s = summarize(evals)
+        self.assertEqual((s["n"], s["first"], s["last"]), (2, "2026-09-01", "2026-09-02"))
+        p = s["profiles"]["serious"]
+        self.assertEqual(p["distinct_events"], 2)                          # php:CVE-1 counted once
+        self.assertEqual(p["rankings"]["model"]["hit_at_k"], 1.0)         # None days are skipped, not zero
+        self.assertEqual(p["lift_vs_recency"], 0.5)
+        self.assertEqual(p["cohorts"]["predictive"], {"n": 4, "hits": 1, "rate": 0.25})
+        self.assertEqual(summarize([]), {"n": 0})
+
+    def test_evaluate_job_is_idempotent_and_waits_for_horizon(self):
+        from app.pipeline import job_evaluate_sync
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            now = datetime.now(timezone.utc)
+            old, recent = now - timedelta(days=45), now - timedelta(days=3)
+            db.write_snapshot(old.isoformat(), score_all(COMPS, [], {}, CFG, old))
+            db.write_snapshot((old + timedelta(hours=6)).isoformat(), score_all(COMPS, [], {}, CFG, old))   # same day
+            db.write_snapshot(recent.isoformat(), score_all(COMPS, [], {}, CFG, recent))
+            ctx = types.SimpleNamespace(db=db, components=COMPS, scoring=CFG)
+            self.assertEqual(job_evaluate_sync(ctx), {"evaluated": 1, "total": 1})   # one day old enough, once per day
+            self.assertEqual(job_evaluate_sync(ctx), {"evaluated": 0, "total": 1})
+            self.assertEqual(len(db.evals()), 1)
+            self.assertEqual(db.evals()[0]["source"], "live")
 
 
 class Backtest(unittest.TestCase):

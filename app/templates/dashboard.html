@@ -113,6 +113,33 @@
     {% endif %}
   </section>
 
+  <section class="panel" aria-labelledby="tr-h">
+    <h2 id="tr-h">Track record <span class="muted">each day's top {{ record.k|default(10) }} judged 30 days later; model vs recency vs chance, and the predictive-only cohort</span></h2>
+    {% if record.n %}
+    <div class="scroll-x"><table>
+      <thead><tr><th>Outcome</th><th class="num">Events</th><th class="num">Model hit@k</th><th class="num">Recency</th><th class="num">Prior</th><th class="num">Chance</th><th class="num">Lift</th><th class="num">Predictive-only</th><th class="num">Quiet</th><th class="num">Active</th></tr></thead>
+      <tbody>{% for name, p in record.profiles.items() %}
+        <tr><td>{{ name }}</td><td class="num">{{ p.events }}</td><td class="num"><b>{{ p.model }}</b></td><td class="num">{{ p.recency }}</td>
+          <td class="num muted">{{ p.prior if p.prior is defined else '' }}</td><td class="num muted">{{ p.chance }}</td>
+          <td class="num {{ 'delta up' if p.lift_word == 'beats' else 'muted' }}">{{ ('%+d'|format((100 * p.lift)|round|int) ~ ' pts') if p.lift is not none else 'n/a' }}</td>
+          <td class="num">{{ p.predictive.hits }}/{{ p.predictive.n }} ({{ p.predictive_pct }})</td>
+          <td class="num muted">{{ p.quiet.hits }}/{{ p.quiet.n }} ({{ p.quiet_pct }})</td>
+          <td class="num muted">{{ p.active.hits }}/{{ p.active.n }}</td></tr>
+      {% endfor %}</tbody>
+    </table></div>
+    <table><thead><tr><th>Judged day</th><th>Source</th>{% for name in evals[0].profiles %}<th class="num">{{ name }}: comps</th><th class="num">model</th><th class="num">recency</th><th class="num">pred.</th>{% endfor %}</tr></thead>
+      <tbody>{% for e in evals %}
+        <tr><td class="muted">{{ e.ts[:10] }}</td><td class="muted">{{ e.source }}</td>
+          {% for name, p in e.profiles.items() %}
+            <td class="num">{{ p.event_components|length }}</td>
+            <td class="num">{{ '%.2f'|format(p.metrics.model.hit_at_k) if p.metrics.model.hit_at_k is not none else '–' }}</td>
+            <td class="num muted">{{ '%.2f'|format(p.metrics.recency.hit_at_k) if p.metrics.recency.hit_at_k is not none else '–' }}</td>
+            <td class="num muted">{{ p.cohorts.predictive.hits }}/{{ p.cohorts.predictive.n }}</td>
+          {% endfor %}</tr>
+      {% endfor %}</tbody></table>
+    {% else %}<p class="empty">Nothing judged yet. Run python -m scripts.replay_eval to judge stored history.</p>{% endif %}
+  </section>
+
   <div class="pair">
     <div class="stack">
       <section class="panel" aria-labelledby="um-h">

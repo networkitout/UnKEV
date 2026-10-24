@@ -88,14 +88,31 @@ def _nvd_ts(dt: datetime) -> str:
 
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 RETRIES = 5
+PAGE_TIMEOUT = 120   # a 2000-record page can take well over the default 30s when NVD is busy
+
+
+def _transient_errors() -> tuple[type, ...]:
+    try:
+        import httpx
+        return (httpx.TransportError,)   # timeouts, resets, connection failures
+    except ImportError:
+        return ()
 
 
 async def _get_page(client, url: str, params: dict, headers: dict):
-    """NVD answers 503 intermittently under normal load. Back off and retry
-    before giving up on a whole window."""
+    """NVD answers 503, or stalls, intermittently under normal load. Back off
+    and retry before giving up on a whole window."""
+    transient = _transient_errors()
     for attempt in range(RETRIES):
-        r = await client.get(url, params=params, headers=headers)
-        if r.status_code not in RETRY_STATUSES or attempt == RETRIES - 1:
+        last = attempt == RETRIES - 1
+        try:
+            r = await client.get(url, params=params, headers=headers, timeout=PAGE_TIMEOUT)
+        except transient:
+            if last:
+                raise
+            await asyncio.sleep(5 * (attempt + 1))
+            continue
+        if r.status_code not in RETRY_STATUSES or last:
             r.raise_for_status()
             return r
         await asyncio.sleep(5 * (attempt + 1))

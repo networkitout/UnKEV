@@ -56,6 +56,12 @@ CREATE TABLE IF NOT EXISTS score_snapshots (
   PRIMARY KEY (ts, component_id)
 );
 
+CREATE TABLE IF NOT EXISTS forecast_eval (
+  ts TEXT NOT NULL, horizon INTEGER NOT NULL, source TEXT NOT NULL,   -- live | replay
+  k INTEGER, result TEXT NOT NULL,                                     -- evaluation.evaluate_snapshot output
+  PRIMARY KEY (ts, horizon, source)
+);
+
 CREATE TABLE IF NOT EXISTS briefs (
   ts TEXT PRIMARY KEY, model TEXT, body TEXT, input_tokens INTEGER, output_tokens INTEGER
 );
@@ -90,7 +96,15 @@ class DB:
     def __init__(self, path: str):
         self.path = path
         with self.conn() as c:
+            self._migrate(c)
             c.executescript(SCHEMA)
+
+    @staticmethod
+    def _migrate(c) -> None:
+        # forecast_eval changed shape before any release; its rows are regenerable (replay / nightly job).
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(forecast_eval)")}
+        if cols and "result" not in cols:
+            c.execute("DROP TABLE forecast_eval")
 
     @contextmanager
     def conn(self):
@@ -178,6 +192,18 @@ class DB:
         with self.conn() as c:
             rows = c.execute("SELECT * FROM signals WHERE observed_at >= ? ORDER BY observed_at DESC",
                              (since_iso,)).fetchall()
+        out = []
+        for r in rows:
+            d = dict(r)
+            d["surfaces"] = json.loads(d["surfaces"] or "[]")
+            for b in ("kev", "emergency", "poc_public", "embargo_broken"):
+                d[b] = bool(d[b])
+            out.append(d)
+        return out
+
+    def signals_until(self, until_iso: str) -> list[dict]:
+        with self.conn() as c:
+            rows = c.execute("SELECT * FROM signals WHERE observed_at <= ? ORDER BY observed_at", (until_iso,)).fetchall()
         out = []
         for r in rows:
             d = dict(r)
@@ -313,6 +339,51 @@ class DB:
             rows = c.execute("SELECT component_id, priority FROM score_snapshots WHERE ts=?",
                              (r["ts"],)).fetchall()
         return {x["component_id"]: x["priority"] for x in rows}
+
+    def daily_snapshots(self, until_iso: str) -> list[str]:
+        """First snapshot timestamp of each UTC day, up to until_iso."""
+        with self.conn() as c:
+            rows = c.execute("SELECT MIN(ts) AS ts FROM score_snapshots WHERE ts <= ? GROUP BY substr(ts, 1, 10) ORDER BY ts",
+                             (until_iso,)).fetchall()
+        return [r["ts"] for r in rows]
+
+    def snapshot_rows(self, ts: str) -> list[dict]:
+        with self.conn() as c:
+            rows = c.execute("SELECT breakdown FROM score_snapshots WHERE ts=?", (ts,)).fetchall()
+        return sorted((json.loads(r["breakdown"]) for r in rows), key=lambda d: d.get("rank", 0))
+
+    # --- forecast evaluation ----------------------------------------------
+    def write_eval(self, result: dict, source: str) -> None:
+        with self.conn() as c:
+            c.execute("INSERT OR REPLACE INTO forecast_eval VALUES(?,?,?,?,?)",
+                      (result["ts"], result["horizon_days"], source, result["k"], json.dumps(result)))
+
+    def evaluated_ts(self, source: str) -> set[str]:
+        with self.conn() as c:
+            return {r["ts"] for r in c.execute("SELECT ts FROM forecast_eval WHERE source=?", (source,))}
+
+    def evals(self, since_iso: str | None = None, source: str | None = None) -> list[dict]:
+        """Newest first. Live evaluations win over replayed ones for the same day."""
+        q, args = "SELECT * FROM forecast_eval", []
+        conds = []
+        if since_iso:
+            conds.append("ts >= ?"); args.append(since_iso)
+        if source:
+            conds.append("source = ?"); args.append(source)
+        if conds:
+            q += " WHERE " + " AND ".join(conds)
+        with self.conn() as c:
+            rows = c.execute(q + " ORDER BY ts DESC, source ASC", args).fetchall()   # 'live' sorts before 'replay'
+        out, days = [], set()
+        for r in rows:
+            day = r["ts"][:10]
+            if day in days:
+                continue
+            days.add(day)
+            d = json.loads(r["result"])
+            d["source"] = r["source"]
+            out.append(d)
+        return out
 
     # --- briefs / runs / usage -----------------------------------------
     def save_brief(self, model: str, body: str, tin: int, tout: int) -> None:
