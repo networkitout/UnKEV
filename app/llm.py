@@ -18,7 +18,7 @@ import json
 import re
 from typing import Any
 
-from .vocab import EXPLOITATION, SURFACES
+from .vocab import ATTRIBUTION, EXPLOITATION, SURFACES
 
 API_URL = "https://api.anthropic.com/v1/messages"
 MAX_DOC_CHARS = 6000
@@ -38,6 +38,7 @@ Rules:
 - exploitation: "confirmed" only if the document reports successful in-the-wild exploitation or KEV listing; "attempts" for reported attempts, scanning, or honeypot hits; "none" if it states no exploitation is known; otherwise "unknown".
 - emergency_release: true only for out-of-band, pre-announced emergency, or zero-day patch releases.
 - cvss: the highest base score the document states, else null. Never estimate one.
+- attribution: who stands behind the document's claims, not who published the page. vendor_advisory if it cites or quotes the affected vendor's own advisory, PSIRT or security team; government for CISA, NCSC or a national CERT; researcher for a named security firm's own analysis; press otherwise.
 - confidence: 0-1, your confidence that the fields are right given the text.
 - evidence: one short sentence in your own words saying what supports the finding. Do not quote more than a few words."""
 
@@ -70,6 +71,9 @@ def _tool_schema(catalog_ids: list[str]) -> dict:
                             "poc_public": {"type": "boolean"},
                             "embargo_broken": {"type": "boolean"},
                             "cvss": {"type": ["number", "null"]},
+                            "attribution": {"type": "string", "enum": list(ATTRIBUTION),
+                                            "description": "Who stands behind the claims: the vendor's own advisory, "
+                                                           "a government body, a named researcher, or press."},
                             "confidence": {"type": "number"},
                             "evidence": {"type": "string"},
                         },
@@ -142,6 +146,7 @@ def validate_findings(payload: Any, refs: set[str], catalog_ids: set[str]) -> li
             "poc_public": bool(f.get("poc_public")),
             "embargo_broken": bool(f.get("embargo_broken")),
             "cvss": cvss,
+            "attribution": f.get("attribution") if f.get("attribution") in ATTRIBUTION else "press",
             "confidence": conf,
             "evidence": _CTRL.sub(" ", str(f.get("evidence") or ""))[:300],
         })
@@ -224,17 +229,38 @@ You receive the current ranked forecast as JSON. Ranking is computed by a determ
 
 Rules:
 - At most 250 words. Plain text. Short paragraphs or "- " lines, no markdown headers, no bold.
-- Every factual claim about a vulnerability must come from the provided drivers or evidence. Mark it [verified: <origin>] when a driver's origin is kev or nvd, and [reported: <origin>] for llm-extracted news.
-- Anything you infer beyond the data (likely variants, what to check next) is marked [inferred].
+- Every factual claim about a vulnerability must come from the provided drivers or evidence, and carries a tag:
+  [verified: kev] or [verified: nvd] for facts from those feeds; a CVE's existence and severity are verified if any of its "origins" is kev or nvd, whichever driver you read it from.
+  [vendor: <vendor>] when the driver's attribution is vendor_advisory: the document cites the affected vendor's own advisory. That is first-party confirmation, not hearsay.
+  [reported: <source>] when the attribution is researcher or press.
+  [inferred] for anything you add beyond the data: likely variants, what to check next.
+- Separate bugs stay separate sentences. Never imply that one driver is the entry point for, or the cause of, another unless a source says so.
+- Catalog evidence on inherited drivers carries a review date. State facts as of that date; don't present them as current if the date is old.
 - Call out components where exposure_status is "unknown". Unknown is a visibility gap, not a clean bill of health.
-- For inherited drivers, name the bundled upstream component and say whether the evidence is an unconfirmed edge.
-- End with up to three concrete next actions tied to specific components."""
+- For inherited drivers, name the bundled upstream component and say whether the edge is vendor-confirmed (confirmed=true) or unconfirmed.
+- End with up to three concrete next actions tied to specific components, in this order: exploited in the wild with a fix available (patch and forensic triage) first; unfixed exposure to restrict second; hygiene third."""
+
+
+DRIVER_FIELDS = ("kind", "label", "origin", "attribution", "observed_at", "evidence", "cve", "source", "confirmed")
+
+
+def _cve_origins(rows: list[dict]) -> dict[str, list[str]]:
+    """Every origin that carries each CVE anywhere in the forecast, so the brief
+    can call a CVE verified from an nvd driver even when it reads it off an llm one."""
+    out: dict[str, set[str]] = {}
+    for r in rows:
+        for d in r.get("drivers") or []:
+            if d.get("cve") and d.get("origin"):
+                out.setdefault(d["cve"], set()).add(d["origin"])
+    return {cve: sorted(o) for cve, o in out.items()}
 
 
 async def brief(client, settings, rows: list[dict]) -> tuple[str, int, int]:
+    origins = _cve_origins(rows)
     slim = [{k: r[k] for k in ("rank", "name", "likelihood", "priority", "exposure_status", "points")}
             | {"inventory": {k: r["inventory"].get(k) for k in ("status", "hosts", "internet_facing")},
-               "drivers": [{k: d.get(k) for k in ("kind", "label", "origin", "observed_at", "evidence")}
+               "drivers": [{k: d.get(k) for k in DRIVER_FIELDS if d.get(k) is not None}
+                           | ({"origins": origins[d["cve"]]} if d.get("cve") in origins else {})
                            for d in r["drivers"][:5]]}   # all stored drivers, so inherited ones aren't crowded out
             for r in rows[:12]]
     resp = await call_claude(client, settings, model=settings.brief_model, system=BRIEF_SYSTEM,

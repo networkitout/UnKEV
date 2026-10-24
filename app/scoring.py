@@ -183,7 +183,7 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
         drivers[cid].append((a + e, {"kind": "direct", "label": _label(s), "url": s.get("url"),
                                      "origin": s.get("origin"), "observed_at": s["observed_at"],
                                      "evidence": s.get("evidence"), "cve": s.get("cve") or None,
-                                     "title": s.get("title"),
+                                     "title": s.get("title"), "attribution": s.get("attribution"),
                                      "flags": {k: bool(s.get(k)) for k in ("kev", "emergency", "poc_public", "embargo_broken")},
                                      "exploitation": s.get("exploitation")}))
 

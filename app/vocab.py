@@ -45,3 +45,13 @@ SURFACE_LABELS: dict[str, str] = {
 }
 
 EXPLOITATION = ("none", "attempts", "confirmed", "unknown")
+
+# What a document attributes its vulnerability claims to. A press article
+# that quotes the vendor's advisory is vendor_advisory, not press: the
+# question is who stands behind the claim, not who published the page.
+ATTRIBUTION: dict[str, str] = {
+    "vendor_advisory": "the affected vendor's own advisory, PSIRT or security team",
+    "government": "a government body such as CISA, NCSC or a national CERT",
+    "researcher": "a named security firm's or researcher's own analysis",
+    "press": "reporting that cites none of the above, or doesn't say",
+}

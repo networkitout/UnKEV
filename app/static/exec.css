@@ -28,6 +28,7 @@
   --hero-shadow: rgba(24, 34, 48, .07);
   --tag-verified-fg: #1d5fa0; --tag-verified-bg: #e7f1fb;
   --tag-reported-fg: #8a5a00; --tag-reported-bg: #fbf1dc;
+  --tag-vendor-fg: #1f5e3a;   --tag-vendor-bg: #e3f3ea;
   --pill-yes-fg: #7a1f1f;     --pill-yes-bg: #fbe4e4;
   --pill-unknown-fg: #6b5600; --pill-unknown-bg: #fbf1dc;
   --pill-no-fg: #1f5e3a;      --pill-no-bg: #e3f3ea;
@@ -60,6 +61,7 @@
   --hero-shadow: rgba(0, 0, 0, .4);
   --tag-verified-fg: #86c5ff; --tag-verified-bg: #16304a;
   --tag-reported-fg: #f3c86b; --tag-reported-bg: #3a2f12;
+  --tag-vendor-fg: #93e3b8;   --tag-vendor-bg: #173a2b;
   --pill-yes-fg: #ffa3a3;     --pill-yes-bg: #4a2022;
   --pill-unknown-fg: #f3c86b; --pill-unknown-bg: #3a2f12;
   --pill-no-fg: #93e3b8;      --pill-no-bg: #173a2b;
@@ -166,6 +168,7 @@ details.fold .fold-body { border-top: 1px solid var(--line); margin-top: 14px; p
        color: var(--muted); background: var(--chip); }
 .tag.verified { color: var(--tag-verified-fg); background: var(--tag-verified-bg); }
 .tag.reported { color: var(--tag-reported-fg); background: var(--tag-reported-bg); }
+.tag.vendor { color: var(--tag-vendor-fg); background: var(--tag-vendor-bg); }
 
 /* top risks */
 .risks { list-style: none; margin: 0; padding: 0; }

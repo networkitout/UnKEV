@@ -14,7 +14,7 @@ from .scoring import surface_heat
 from .vocab import SURFACE_LABELS, SURFACES
 
 
-_TAG = re.compile(r"\[(verified|reported)(?::\s*([a-z0-9 _-]{1,24}))?\]|\[(inferred)\]", re.I)
+_TAG = re.compile(r"\[(verified|vendor|reported)(?::\s*([a-z0-9 _.&/-]{1,32}))?\]|\[(inferred)\]", re.I)
 
 
 def brief_html(text: str | None) -> Markup:

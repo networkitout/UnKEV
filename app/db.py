@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS signals (
   cvss REAL, epss REAL, epss_date TEXT,
   confidence REAL NOT NULL DEFAULT 0.7,
   observed_at TEXT NOT NULL, title TEXT, url TEXT, evidence TEXT,
+  attribution TEXT,                     -- vendor_advisory|government|researcher|press, llm signals only
   UNIQUE(intel_id, component_id, cve, origin)
 );
 CREATE INDEX IF NOT EXISTS ix_signals_comp ON signals(component_id, observed_at);
@@ -105,6 +106,9 @@ class DB:
         cols = {r["name"] for r in c.execute("PRAGMA table_info(forecast_eval)")}
         if cols and "result" not in cols:
             c.execute("DROP TABLE forecast_eval")
+        cols = {r["name"] for r in c.execute("PRAGMA table_info(signals)")}
+        if cols and "attribution" not in cols:
+            c.execute("ALTER TABLE signals ADD COLUMN attribution TEXT")
 
     @contextmanager
     def conn(self):
@@ -153,20 +157,22 @@ class DB:
                    cve: str = "", surfaces: list[str] | None = None, exploitation: str = "unknown",
                    kev: bool = False, emergency: bool = False, poc_public: bool = False,
                    embargo_broken: bool = False, cvss: float | None = None, confidence: float = 0.7,
-                   title: str | None = None, url: str | None = None, evidence: str | None = None) -> None:
+                   title: str | None = None, url: str | None = None, evidence: str | None = None,
+                   attribution: str | None = None) -> None:
         with self.conn() as c:
             c.execute(
                 """INSERT INTO signals(intel_id,component_id,cve,origin,surfaces,exploitation,kev,emergency,
-                   poc_public,embargo_broken,cvss,confidence,observed_at,title,url,evidence)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   poc_public,embargo_broken,cvss,confidence,observed_at,title,url,evidence,attribution)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                    ON CONFLICT(intel_id,component_id,cve,origin) DO UPDATE SET
                      surfaces=excluded.surfaces, exploitation=excluded.exploitation, kev=excluded.kev,
                      emergency=excluded.emergency, poc_public=excluded.poc_public,
                      embargo_broken=excluded.embargo_broken, cvss=COALESCE(excluded.cvss, signals.cvss),
-                     confidence=excluded.confidence, evidence=COALESCE(excluded.evidence, signals.evidence)""",
+                     confidence=excluded.confidence, evidence=COALESCE(excluded.evidence, signals.evidence),
+                     attribution=COALESCE(excluded.attribution, signals.attribution)""",
                 (intel_id, component_id, cve or "", origin, json.dumps(surfaces or []), exploitation,
                  int(kev), int(emergency), int(poc_public), int(embargo_broken), cvss, confidence,
-                 observed_at, title, url, evidence),
+                 observed_at, title, url, evidence, attribution),
             )
 
     def tag_signals_for_intel(self, intel_id: str, surfaces: list[str], confidence: float,

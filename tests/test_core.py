@@ -59,12 +59,15 @@ class Scoring(unittest.TestCase):
         self.assertEqual(res["nginx"]["points"]["inherited"], 0)     # nginx does not
         self.assertEqual(res["php"]["points"]["inherited"], 0)       # never inherits from itself
         d = next(d for d in res["panos"]["drivers"] if d["kind"] == "inherited")
-        self.assertEqual(d["label"], "PHP CVE-2026-0001 bundled in Palo Alto PAN-OS (unconfirmed edge)")
+        self.assertEqual(d["label"], "PHP CVE-2026-0001 bundled in Palo Alto PAN-OS")          # vendor-confirmed edge
+        d = next(d for d in res["ivanti-ics"]["drivers"] if d["kind"] == "inherited")
+        self.assertEqual(d["label"], "PHP CVE-2026-0001 bundled in Ivanti Connect Secure (unconfirmed edge)")
 
     def test_confirmed_edge_outweighs_unconfirmed(self):
-        confirmed = copy.deepcopy(COMPS)
+        confirmed, unconfirmed = copy.deepcopy(COMPS), copy.deepcopy(COMPS)
         confirmed["panos"]["embeds"][0]["confirmed"] = True
-        unconf = by_id(score_all(COMPS, [sig("php")], {}, CFG, NOW))["panos"]
+        unconfirmed["panos"]["embeds"][0]["confirmed"] = False
+        unconf = by_id(score_all(unconfirmed, [sig("php")], {}, CFG, NOW))["panos"]
         conf = by_id(score_all(confirmed, [sig("php")], {}, CFG, NOW))["panos"]
         self.assertGreater(conf["points"]["inherited"], unconf["points"]["inherited"])
         d = next(d for d in conf["drivers"] if d["kind"] == "inherited")
@@ -322,11 +325,39 @@ class LLMBoundary(unittest.TestCase):
         self.assertEqual([c["type"] for c in Client.calls], ["tool", "auto", "auto"])   # remembered: no forced retry
 
     def test_brief_is_escaped(self):
-        html = str(brief_html('<script>alert(1)</script> fine [verified: kev] guess [inferred] <img src=x onerror=1>'))
+        html = str(brief_html('<script>alert(1)</script> fine [verified: kev] guess [inferred] <img src=x onerror=1> [vendor: Palo Alto] [reported: The Hacker News]'))
         self.assertNotIn("<script>", html)
         self.assertNotIn("<img", html)
         self.assertIn('<span class="tag verified">verified: kev</span>', html)
         self.assertIn('<span class="tag inferred">inferred</span>', html)
+        self.assertIn('<span class="tag vendor">vendor: Palo Alto</span>', html)
+        self.assertIn('<span class="tag reported">reported: The Hacker News</span>', html)
+
+    def test_attribution_travels_from_extraction_to_brief(self):
+        from app.llm import _cve_origins
+        from app.pipeline import apply_findings
+        payload = {"findings": [{"item_ref": "d0", "relevant": True, "components": ["panos"], "cves": ["CVE-2026-0322"],
+                                 "surfaces": [], "exploitation": "confirmed", "emergency_release": False, "poc_public": False,
+                                 "embargo_broken": False, "confidence": 0.9, "attribution": "vendor_advisory"},
+                                {"item_ref": "d1", "relevant": True, "components": ["php"], "surfaces": [], "exploitation": "none",
+                                 "emergency_release": False, "poc_public": False, "embargo_broken": False, "confidence": 0.8,
+                                 "attribution": "rumour"}]}                     # off-enum -> press
+        f = validate_findings(payload, {"d0", "d1"}, self.ids)
+        self.assertEqual([x["attribution"] for x in f], ["vendor_advisory", "press"])
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            ctx = types.SimpleNamespace(db=db, components=COMPS)
+            row = {"id": "i1", "source": "rss", "url": "https://x/a", "title": "t", "published_at": "2026-10-22T00:00:00+00:00"}
+            apply_findings(ctx, {"d0": row, "d1": dict(row, id="i2")}, f)
+            sigs = {s["component_id"]: s for s in db.signals_since("2000")}
+            self.assertEqual(sigs["panos"]["attribution"], "vendor_advisory")
+            db.add_signal(intel_id="n1", component_id="panos", origin="nvd", cve="CVE-2026-0322",
+                          observed_at="2026-10-22T00:00:00+00:00", cvss=8.8)
+            rows = score_all(COMPS, db.signals_since("2000"), {}, CFG, NOW)
+            panos = next(r for r in rows if r["component_id"] == "panos")
+            attrs = {d.get("origin"): d.get("attribution") for d in panos["drivers"] if d["kind"] == "direct"}
+            self.assertEqual(attrs["llm"], "vendor_advisory")                   # survives into the driver
+            self.assertEqual(_cve_origins(rows)["CVE-2026-0322"], ["llm", "nvd"])   # the brief can call it verified
 
 
 class ExecutiveView(unittest.TestCase):
@@ -334,7 +365,8 @@ class ExecutiveView(unittest.TestCase):
         res = by_id(score_all(COMPS, [sig("php", kev=True), sig("nodejs", surfaces=["ip-canonicalization"], emergency=True, cve="CVE-2026-7")], {}, CFG, NOW))
         self.assertTrue(why_now(res["php"]).startswith("Exploited in the wild, per CISA KEV: CVE-2026-0001"))
         self.assertTrue(why_now(res["nodejs"]).startswith("Emergency patch released: CVE-2026-7"))
-        self.assertTrue(why_now(res["panos"]).startswith("Bundles PHP, which just had a serious flaw (CVE-2026-0001), vendor impact not yet confirmed"))
+        self.assertEqual(why_now(res["panos"]), "Bundles PHP, which just had a serious flaw (CVE-2026-0001)")
+        self.assertTrue(why_now(res["ivanti-ics"]).startswith("Bundles PHP, which just had a serious flaw (CVE-2026-0001), vendor impact not yet confirmed"))
         self.assertTrue(why_now(res["curl"]).startswith("The same kind of flaw just hit Node.js (ip-canonicalization)"))
         self.assertEqual(why_now(res["zlib"]), "No recent activity; this is structural risk only")
         r = dict(res["php"], activity_ratio=3.2)
@@ -439,19 +471,19 @@ class Pipeline(unittest.TestCase):
             ctx = types.SimpleNamespace(db=DB(os.path.join(d, "t.db")), components=COMPS)
             row = {"id": "i1", "source": "rss", "url": "https://x/a", "title": "t",
                    "published_at": "2026-10-22T00:00:00+00:00"}
-            finding = {"item_ref": "d0", "relevant": True, "components": ["fortios", "panos", "php"],
+            finding = {"item_ref": "d0", "relevant": True, "components": ["sqlite", "panos", "php"],
                        "upstream_components": ["php"], "unmapped_names": [], "cves": [],
                        "surfaces": [], "exploitation": "none", "emergency_release": False,
                        "poc_public": False, "embargo_broken": False, "cvss": None, "confidence": 0.8,
                        "evidence": "advisory says it bundles PHP"}
             st = apply_findings(ctx, {"d0": row}, [finding])
             rows = {(r["host"], r["upstream"]): dict(r) for r in ctx.db.embed_candidates()}
-            self.assertIn(("fortios", "php"), rows)          # not in the catalog: proposed
+            self.assertIn(("sqlite", "php"), rows)           # not in the catalog: proposed
             self.assertNotIn(("panos", "php"), rows)         # already a catalog edge: skipped
             self.assertNotIn(("php", "php"), rows)           # no self-edges
             self.assertEqual(st["edges"], 1)
-            self.assertEqual(rows[("fortios", "php")]["mentions"], 1)
-            self.assertEqual(rows[("fortios", "php")]["example_url"], "https://x/a")
+            self.assertEqual(rows[("sqlite", "php")]["mentions"], 1)
+            self.assertEqual(rows[("sqlite", "php")]["example_url"], "https://x/a")
             apply_findings(ctx, {"d0": row}, [finding])
             self.assertEqual(dict(ctx.db.embed_candidates()[0])["mentions"], 2)
 

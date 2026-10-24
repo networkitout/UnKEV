@@ -349,7 +349,9 @@ netscaler:
   kev: [["citrix", "netscaler|adc|gateway"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
   embeds:
-    - {component: php, evidence: "SINGLE SECONDARY SOURCE: tracker lists NetScaler management interfaces as not fixed for PHP2Shell (2026-10-23). No Citrix advisory seen yet.", confirmed: false}
+    - component: php
+      evidence: "Citrix CTX697263: NetScaler ADC and Gateway impacted; the Management Portal uses PHP. Exposed surfaces are the NSIP GUI, any SNIP with management access, and the Cluster IP GUI; the Gateway/AAA path has PHP off. Fix in progress (vendor advisory, reviewed 2026-10-24)"
+      confirmed: true
 
 panos:
   name: Palo Alto PAN-OS
@@ -362,8 +364,8 @@ panos:
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
   embeds:
     - component: php
-      evidence: "Palo Alto PHP2Shell advisory: PAN-OS 10.2-12.2 and all Panorama versions affected, fix ETA TBD (reported 2026-10-22)"
-      confirmed: false   # flip to true after reading the vendor advisory yourself
+      evidence: "Palo Alto advisory: every release of PAN-OS 10.2-12.2 and all Panorama versions vulnerable; WildFire WF-500 also affected. Emergency content update 9163-10313 shipped 2026-10-23; hotfix ETAs about 2026-10-28/30. A dataplane interface is exposed whenever an interface management profile is attached; IPS signatures only help on decrypted management traffic (vendor advisory, reviewed 2026-10-24)"
+      confirmed: true
 
 ivanti-ics:
   name: Ivanti Connect Secure
@@ -374,6 +376,10 @@ ivanti-ics:
   cpe: ["ivanti:connect_secure", "ivanti:policy_secure"]
   kev: [["ivanti|pulse", "connect secure|policy secure|pulse"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+  embeds:
+    - component: php
+      evidence: "Ivanti appliances are reported to be PHP-based (press, 2026-10). No Ivanti advisory seen; not vendor-confirmed"
+      confirmed: false
 
 fortios:
   name: Fortinet FortiOS
@@ -384,6 +390,10 @@ fortios:
   cpe: ["fortinet:fortios", "fortinet:fortiproxy"]
   kev: [["fortinet", "fortios|fortigate|fortiproxy"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+  embeds:
+    - component: php
+      evidence: "Fortinet PSIRT PHP2Shell advisory rates CVE-2026-109618 at 9.8 for affected products. TODO(verify) which FortiOS / FortiProxy builds the advisory lists (vendor advisory, reviewed 2026-10-24)"
+      confirmed: true
 
 cisco-asyncos:
   name: Cisco Secure Email (AsyncOS)
@@ -405,7 +415,9 @@ f5-bigip:
   kev: [["^f5$", "big-ip"]]
   inventory: {}
   embeds:
-    - {component: php, evidence: "F5 K000163821: Configuration utility affected, 21.1.0, 17.5.0-17.5.1, 17.1.0-17.1.3, not fixed (secondary report 2026-10-23)", confirmed: false}
+    - component: php
+      evidence: "F5 K000163821: Configuration utility affected across all modules, rated High 7.5, not fixed. TODO(verify) the 17.5.x and 17.1.x ranges against the KB itself; they match CVE-2026-94127's ranges exactly and may have bled over from that CVE (vendor advisory, reviewed 2026-10-24)"
+      confirmed: true
 
 cisco-expressway:
   name: Cisco Expressway
@@ -417,7 +429,9 @@ cisco-expressway:
   kev: [["cisco", "expressway"]]
   inventory: {}
   embeds:
-    - {component: php, evidence: "Cisco CSCwx37062: Expressway and Expressway Select affected, Critical, fixed in 15.5.21, no workaround (reported 2026-10-22)", confirmed: false}
+    - component: php
+      evidence: "Cisco PHP advisory, Oct 2026 (CSCwx37062): Expressway and Expressway Select affected. Fixed release 15.5.21, availability TBD. Workaround per the advisory: disable the web interface (vendor advisory, reviewed 2026-10-24)"
+      confirmed: true
 
 symantec-sepm:
   name: Symantec Endpoint Protection Manager

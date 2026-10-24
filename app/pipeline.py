@@ -103,7 +103,7 @@ def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
                         emergency=f["emergency_release"], poc_public=f["poc_public"],
                         embargo_broken=f["embargo_broken"], cvss=f["cvss"],
                         confidence=f["confidence"], observed_at=observed, title=row["title"],
-                        url=row["url"], evidence=f["evidence"])
+                        url=row["url"], evidence=f["evidence"], attribution=f.get("attribution"))
                     stats["signals"] += 1
         ctx.db.mark_intel(row["id"], "extracted")
     for ref, row in rows_by_ref.items():
