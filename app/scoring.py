@@ -104,8 +104,9 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
     baseline_ready = history_days is not None and history_days >= ab["min_history_days"]
     beta = float(ab["beta"]) if baseline_ready else 0.0
 
-    recent_base = {cid: 0.0 for cid in components}    # severity mass, last W days, decayed
+    recent_base = {cid: 0.0 for cid in components}    # severity mass, last W days, decayed (scored)
     recent_bonus = {cid: 0.0 for cid in components}   # emergency/PoC/embargo mass, last W days, decayed
+    recent_mass = {cid: 0.0 for cid in components}    # severity mass, last W days, undecayed (reported)
     base_mass = {cid: 0.0 for cid in components}      # severity mass aged W..B days, undecayed
     spill = {cid: 0.0 for cid in components}
     exploit = {cid: 0.0 for cid in components}
@@ -145,6 +146,7 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
         if age < W:
             recent_base[cid] += sev * conf * d_act
             recent_bonus[cid] += bon * conf * d_act
+            recent_mass[cid] += sev * conf
         elif age < B:
             base_mass[cid] += sev * conf
 
@@ -216,9 +218,10 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
             "priority": priority, "points": points, "drivers": top,
             "exposure_factor": round(factor, 3),
             "term_max": {k: round(100 * w[k] / wsum, 1) for k in terms},
-            "activity_recent": round(recent_base[cid], 3),
+            # Both undecayed, so the ratio is a true rate ratio: 1.0 means "its usual rate".
+            "activity_recent": round(recent_mass[cid], 3),
             "activity_expected": round(expected, 3),
-            "activity_ratio": round(recent_base[cid] / expected, 2) if expected > 0 else None,
+            "activity_ratio": round(recent_mass[cid] / expected, 2) if expected > 0 else None,
             "baseline_ready": baseline_ready,
             "surfaces": c.get("surfaces") or [],
             "inventory": inventory.get(cid) or {"status": "unknown"},

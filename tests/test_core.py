@@ -126,9 +126,9 @@ class Scoring(unittest.TestCase):
         self.assertGreater(res["nodejs"]["priority"], res["php"]["priority"])
 
 
-def churn(cid, windows, per_window=6, **kw):
+def churn(cid, windows, per_window=6, tag="", **kw):
     """per_window CVSS-9 signals in each 30-day window, newest window first."""
-    return [sig(cid, days_ago=w * 30 + k * 5 + 1, cve=f"CVE-{cid}-{w}-{k}", **kw)
+    return [sig(cid, days_ago=w * 30 + k * 5 + 1, cve=f"CVE-{cid}{tag}-{w}-{k}", **kw)
             for w in range(windows) for k in range(per_window)]
 
 
@@ -147,8 +147,16 @@ class ActivityBaseline(unittest.TestCase):
         self.assertTrue(a["baseline_ready"])
         self.assertGreater(b["points"]["activity"], a["points"]["activity"] * 3)
         self.assertAlmostEqual(a["points"]["activity"], 0, places=0)
-        self.assertLess(a["activity_ratio"], 1.0)
         self.assertGreater(a["activity_expected"], 0)
+
+    def test_ratio_is_a_true_rate_ratio(self):
+        steady = self.activity(self.A, history_days=180)
+        self.assertAlmostEqual(steady["activity_ratio"], 1.0, places=2)     # its usual rate reads 1.0x
+        self.assertAlmostEqual(steady["activity_recent"], steady["activity_expected"], places=2)
+        doubled = self.activity(self.A + churn("imagemagick", windows=1, tag="x"), history_days=180)
+        self.assertAlmostEqual(doubled["activity_ratio"], 2.0, places=2)    # twice the usual rate reads 2.0x
+        self.assertGreater(doubled["points"]["activity"], steady["points"]["activity"])
+        self.assertEqual(self.activity(self.A)["activity_ratio"], 1.0)      # reported even in cold start
 
     def test_cold_start_uses_raw_activity(self):
         a = self.activity(self.A)

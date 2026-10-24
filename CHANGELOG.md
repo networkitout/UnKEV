@@ -22,7 +22,7 @@ Out of a forecast review on 2026-10-23: PHP2Shell propagated along *dependency* 
 
 - Activity now reacts to a change in a component's CVE rate, not the level. Recent severity mass (last 30 days, decayed) has the expected mass from the 30..180-day baseline subtracted before saturation. Emergency, PoC and embargo bonuses are never subtracted. Config in `scoring.yaml` `activity_baseline`.
 - Until the signal store covers `min_history_days` (150) of NVD history, β is forced to 0 (cold start) and results carry `baseline_ready: false`; the detail panel says "baseline warming up". History coverage comes from the kv `nvd_history_from`, set by the first NVD run and moved earlier by the new `scripts/backfill_nvd.py --days 180`, which walks back in ≤119-day windows on publication date.
-- Results gain `activity_recent`, `activity_expected` and `activity_ratio`. The detail panel shows "N.N× its usual CVE rate" at ≥ 1.5.
+- Results gain `activity_recent`, `activity_expected` and `activity_ratio`, both masses undecayed so the ratio is a true rate ratio (1.0 = its usual rate). The detail panel shows "N.N× its usual CVE rate" at ≥ 1.5.
 - `validate_config` fails loudly if `max_signal_age_days` < `baseline_window_days`.
 - The NVD page loop is shared between the collector and the backfill (`fetch_nvd_window`).
 

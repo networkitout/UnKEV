@@ -112,7 +112,7 @@ python -m scripts.backfill_nvd --days 180   # walks back in ≤119-day windows o
 
 Mind the Claude budget: backfilled CVEs at or above `llm_tag_min_cvss` are queued for surface tagging like any other. Fresh items are processed first and the daily cap still applies.
 
-The detail panel shows "N.N× its usual CVE rate" when recent/expected is at least 1.5. Every result also carries `activity_recent`, `activity_expected`, `activity_ratio` and `baseline_ready`.
+The detail panel shows "N.N× its usual CVE rate" when the ratio is at least 1.5. The ratio compares undecayed recent severity mass to the expected mass, so it's a true rate ratio: a component at its usual rate reads 1.0×. Every result also carries `activity_recent`, `activity_expected`, `activity_ratio` and `baseline_ready`.
 
 ### Two kinds of `embeds`
 
