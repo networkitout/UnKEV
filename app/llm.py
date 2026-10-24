@@ -238,7 +238,7 @@ Rules:
 - Catalog evidence on inherited drivers carries a review date. State facts as of that date; don't present them as current if the date is old.
 - Call out components where exposure_status is "unknown". Unknown is a visibility gap, not a clean bill of health.
 - For inherited drivers, name the bundled upstream component and say whether the edge is vendor-confirmed (confirmed=true) or unconfirmed.
-- End with up to three concrete next actions tied to specific components, in this order: exploited in the wild with a fix available (patch and forensic triage) first; unfixed exposure to restrict second; hygiene third."""
+- End with up to three concrete next actions tied to specific components, in this order: exploited in the wild with a fix available first, naming every such CVE and its fixed build, with forensic triage; unfixed exposure to restrict second; hygiene third."""
 
 
 DRIVER_FIELDS = ("kind", "label", "origin", "attribution", "observed_at", "evidence", "cve", "source", "confirmed")
