@@ -355,8 +355,10 @@ class ExecutiveView(unittest.TestCase):
             week_ago = datetime.now(timezone.utc) - timedelta(days=8)
             db.write_snapshot(week_ago.isoformat(), score_all(COMPS, [], db.inventory(), CFG, week_ago))
             db.write_snapshot(datetime.now(timezone.utc).isoformat(), score_all(COMPS, sigs, db.inventory(), CFG))
-            ctx = types.SimpleNamespace(db=db, components=COMPS)
+            ctx = types.SimpleNamespace(db=db, components=COMPS, scoring=CFG)
             x = exec_context(ctx)
+            self.assertIn("grid", x)
+            self.assertTrue(all("label" in s for s in x["grid"]["surfaces"]))
             self.assertEqual(x["kpis"]["exploited"], 1)
             self.assertEqual(x["kpis"]["exploited_us"], 1)                  # windows is in inventory
             self.assertEqual(x["exploited"][0]["estate"], "Yes, 40 hosts")

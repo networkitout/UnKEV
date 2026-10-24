@@ -80,6 +80,41 @@
     {% else %}<p class="empty">No scores yet.</p>{% endif %}
   </section>
 
+  <section class="sec" id="spread" aria-labelledby="sp-h">
+    <header>
+      <h2 id="sp-h">Where trouble could spread next</h2>
+      <p>Attack surfaces that broke somewhere in the last 30 days, and which of our components share them. When one component breaks at a surface, others sharing it tend to follow. Brighter is hotter; an outlined cell has already been hit.</p>
+    </header>
+    {% if grid.surfaces %}
+    <div class="heat-wrap">
+      <table class="heat">
+        <thead><tr>
+          <th class="cname"></th>
+          {% for s in grid.surfaces %}
+            <th title="{{ s.desc }}"><div class="hbar"><i style="width: {{ (s.heat * 100)|round|int }}%"></i></div><span>{{ s.label }}</span></th>
+          {% endfor %}
+        </tr></thead>
+        <tbody>
+        {% for c in grid.cols %}
+          <tr>
+            <th class="cname" title="{{ c.name }}"><a href="/analyst?c={{ c.component_id }}">{{ c.name }}</a><span class="rk">#{{ c.rank }}</span></th>
+            {% for s in grid.surfaces %}{% set cell = grid.cells.get((s.id, c.component_id)) %}
+              <td>{% if cell %}<span class="cell on{{ ' origin' if cell.origin }}" style="--h: {{ cell.heat }}"
+                     title="{{ c.name }} / {{ s.label }}{{ ': already hit here' if cell.origin else ': shares this surface' }}"></span>
+                  {% else %}<span class="cell" aria-hidden="true"></span>{% endif %}</td>
+            {% endfor %}
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span><i class="sw on"></i>shares a surface that broke elsewhere (brighter = hotter)</span>
+      <span><i class="sw on origin"></i>already hit at this surface</span>
+    </div>
+    {% else %}<p class="empty">No surface-tagged activity in the last 30 days. Surfaces come from Claude's extraction of news and high-severity CVEs.</p>{% endif %}
+  </section>
+
   <section class="sec" id="exploited" aria-labelledby="ex-h">
     <header>
       <h2 id="ex-h">Actively exploited</h2>

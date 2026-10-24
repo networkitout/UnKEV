@@ -10,7 +10,7 @@ from markupsafe import Markup, escape
 
 from .db import iso, utcnow
 from .scoring import surface_heat
-from .vocab import SURFACES
+from .vocab import SURFACE_LABELS, SURFACES
 
 
 _TAG = re.compile(r"\[(verified|reported)(?::\s*([a-z0-9 _-]{1,24}))?\]|\[(inferred)\]", re.I)
@@ -196,7 +196,8 @@ def spill_grid(ctx, rows: list[dict], signals: list[dict], max_surfaces: int = 8
                     "heat": round(heat[surf] / hmax, 2),
                     "origin": (r["component_id"], surf) in origin,
                 }
-    return {"surfaces": [{"id": s, "desc": SURFACES.get(s, ""), "heat": round(heat[s] / hmax, 2)} for s in surfaces],
+    return {"surfaces": [{"id": s, "label": SURFACE_LABELS.get(s, s), "desc": SURFACES.get(s, ""),
+                          "heat": round(heat[s] / hmax, 2)} for s in surfaces],
             "cols": cols, "cells": cells}
 
 
@@ -257,8 +258,10 @@ def exec_context(ctx, top_n: int = 10) -> dict:
     watch = [r for r in rows if r["rank"] <= 15]
     moved = [r for r in rows if r["delta"] is not None]
     brief = ctx.db.latest_brief()
+    signals = ctx.db.signals_since(iso(utcnow() - timedelta(days=30)))
     return {
         "ts": ts, "ts_ago": ago(ts),
+        "grid": spill_grid(ctx, rows, signals, max_surfaces=8, max_cols=12),
         "kpis": {
             "high": sum(1 for r in rows if r["band"] in ("crit", "high")),
             "crit": sum(1 for r in rows if r["band"] == "crit"),

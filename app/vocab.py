@@ -22,4 +22,26 @@ SURFACES: dict[str, str] = {
     "kernel-network": "kernel or OS network stack, RPC services",
 }
 
+# Short plain-language names for the executive view.
+SURFACE_LABELS: dict[str, str] = {
+    "http-parsing": "HTTP parsing",
+    "multipart-upload": "File upload",
+    "session-state": "Session state",
+    "compression": "Compression",
+    "archive": "Archive formats",
+    "image-codec": "Image decoding",
+    "document-parser": "Document parsing",
+    "xml": "XML parsing",
+    "serialization": "Deserialization",
+    "dns": "DNS",
+    "ip-canonicalization": "IP / hostname parsing",
+    "tls-validation": "TLS validation",
+    "auth-session-reuse": "Auth & session reuse",
+    "template-engine": "Templating",
+    "path-handling": "Path handling",
+    "vpn-gateway": "VPN gateway",
+    "mgmt-plane": "Management plane",
+    "kernel-network": "Kernel network stack",
+}
+
 EXPLOITATION = ("none", "attempts", "confirmed", "unknown")
