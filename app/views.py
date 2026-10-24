@@ -51,7 +51,7 @@ def register_filters(env) -> None:
     env.globals["origin_label"] = origin_label
 
 
-ORIGINS = {"kev": "CISA KEV", "nvd": "NVD", "llm": "news, extracted by Claude", "seed": "seed data"}
+ORIGINS = {"kev": "CISA KEV", "nvd": "NVD", "osv": "OSV", "llm": "news, extracted by Claude", "seed": "seed data"}
 
 
 def origin_label(o: str | None) -> str:

@@ -1,12 +1,13 @@
 # UnKEV
 
-Emerging-vulnerability forecast - UnKEV ingests KEV, NVD, EPSS and security news, and uses Claude to turn the news into structured signals. It then ranks catalog components by how likely they are to break soon.
+Emerging-vulnerability forecast - UnKEV ingests KEV, NVD, OSV, EPSS and security news, and uses Claude to turn the news into structured signals. It then ranks catalog components by how likely they are to break soon.
 
 The ranking is deterministic and reproducible. Claude extracts facts and writes the daily brief. It never sets a score or a weight.
 
 ```
  KEV ──────────┐ deterministic map (vendor/product regex)
  NVD 2.0 ──────┤ deterministic map (CPE, then description aliases)
+ OSV ──────────┤ per-package allowlist (config/packages.yaml), exact match
  RSS/Atom ─────┤ local prefilter ─► Claude: record_findings (forced tool, enums)
  EPSS ─────────┘                         │ validated, off-vocab dropped
                                          ├─► embed_candidates ─► "Proposed dependency edges"
@@ -46,7 +47,7 @@ UNKEV_PASSWORD=change-me uvicorn app.main:app --port 8080
 
    The containers run with a read-only root filesystem, as a non-root user (uid 10001), with all capabilities dropped and no-new-privileges set. The only writable state is the `/data` volume. Front the web container with your TLS/SSO proxy; it binds to 127.0.0.1 only. If you swap the named volume for a bind mount, `chown 10001` the host directory first.
 
-Egress needed: `api.anthropic.com`, `www.cisa.gov`, `services.nvd.nist.gov`, `api.first.org`, your RSS hosts, and your inventory API.
+Egress needed: `api.anthropic.com`, `www.cisa.gov`, `services.nvd.nist.gov`, `api.osv.dev`, `api.first.org`, your RSS hosts, and your inventory API.
 
 ## Wiring inventory
 
@@ -68,6 +69,16 @@ Exposure status means:
 | declared | only `appliances.yaml` says it's there |
 
 Runtime components such as PHP and Node need per-host *application* inventory, for example Falcon Discover apps. If your inventory only has host/OS records, they will read "unknown".
+
+## Package-level sources (OSV)
+
+Some of the most predictive activity lives in npm/PyPI packages (the IP-canonicalization churn in `ip-address` and `fast-uri`), which neither host inventory nor NVD CPE matching can see. `config/packages.yaml` is an allowlist of packages, each mapped to a catalog component, normally a dedicated `ecosystem: package` entry. OSV is queried per listed package (`POST /v1/query`), never crawled, so cost is one small request per package per run.
+
+- Matching is exact: the package is the component, confidence 0.9, no text matching.
+- OSV carries CVSS *vectors*. v3 vectors are scored exactly. GHSA advisories since 2025 carry v4 only; for those the advisory's own qualitative severity is mapped to the bottom of its CVSS band (`osv.severity_bands`) so it lands in the right severity bucket. That's a band, not a measured score; remove the config block to leave them unscored.
+- Withdrawn records and `MAL-` (malicious-package) records are skipped. GHSA and CVE records for the same bug collapse into one signal.
+- Entries at or above `osv.llm_tag_min_cvss` (7.0) are queued for surface tagging by Claude. Surface tags are what let a package bug spill onto catalog components sharing that surface.
+- Package components have no aliases on purpose: names like `ip-address` are ordinary prose. Their exposure is always "unknown": host inventory doesn't see packages inside applications.
 
 ## Scoring model (`config/scoring.yaml`)
 
@@ -149,6 +160,7 @@ These came from memory and were not verified against live endpoints in this buil
 
 - feed URLs
 - NVD date format, `pub`/`lastMod` date parameter names, 120-day window limit and rate limits
+- OSV `page_token` pagination and rate limits (the query endpoint and response shape were checked live on 2026-10-23)
 - CPE product names on the components added in 0.2 (`f5-bigip`, `cisco-expressway`, `symantec-sepm`, `cb-app-control`)
 - EPSS batch limits
 - Claude model IDs
@@ -160,4 +172,4 @@ These came from memory and were not verified against live endpoints in this buil
 - Add a CWE-to-surface mapping so KEV and NVD signals carry surfaces without Claude.
 - Add a spillover and inherited backtest once around 90 days of extractions exist.
 - Add catalog growth from the "not in the catalog" and "Proposed dependency edges" lists.
-- Add GitHub Security Advisories and OSV as structured sources.
+- Grow `packages.yaml` beyond the two starter packages; add a CWE-to-surface mapping so OSV's `cwe_ids` carry surfaces without Claude.

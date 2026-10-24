@@ -25,6 +25,22 @@ epss:
   url: https://api.first.org/data/v1/epss
   batch_size: 50
 
+osv:
+  enabled: true
+  url: https://api.osv.dev/v1/query      # verified 2026-10-23; TODO(verify) page_token pagination
+  # Packages come from config/packages.yaml. Entries at or above this score
+  # are queued for surface tagging by Claude, as with NVD. Lower than NVD's
+  # 8.0 on purpose: the allowlist is small, and surface tags are what let a
+  # package bug spill onto the catalog components sharing that surface.
+  llm_tag_min_cvss: 7.0
+  pause_seconds: 0.2                      # TODO(verify) OSV rate limits
+  # OSV carries CVSS vectors, not scores. v3 vectors are scored exactly. GHSA
+  # advisories since 2025 carry v4 only; for those the advisory's own
+  # qualitative severity is mapped to the bottom of its CVSS band so it lands
+  # in the right severity bucket. A band, not a measured score. Remove this
+  # block to leave v4-only records unscored (weight 0.5, never queued).
+  severity_bands: {CRITICAL: 9.0, HIGH: 7.0, MODERATE: 4.0, LOW: 1.0}
+
 rss:
   enabled: true
   max_items_per_feed: 40

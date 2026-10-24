@@ -355,6 +355,86 @@ class Pipeline(unittest.TestCase):
                                          end - timedelta(days=MAX_WINDOW_DAYS + 1), end))
 
 
+class OSV(unittest.TestCase):
+    def test_cvss3_base_known_vectors(self):
+        from app.collectors.osv import cvss3_base
+        self.assertEqual(cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"), 9.8)
+        self.assertEqual(cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H"), 10.0)
+        self.assertEqual(cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"), 7.5)
+        self.assertEqual(cvss3_base("CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"), 5.9)
+        self.assertEqual(cvss3_base("CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N"), 3.3)
+        self.assertEqual(cvss3_base("CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:N"), 0.0)
+        self.assertIsNone(cvss3_base("CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"))
+        self.assertIsNone(cvss3_base("CVSS:3.1/AV:N/AC:L"))
+        self.assertIsNone(cvss3_base(""))
+
+    def test_process_osv_vulns(self):
+        from app.collectors.osv import process_osv_vulns
+        from app.pipeline import apply_findings
+        today = datetime.now(timezone.utc)
+        ts = lambda d: (today - timedelta(days=d)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        vulns = [
+            {"id": "GHSA-aaaa", "aliases": ["CVE-2026-50001"], "summary": "SSRF via IPv4 spelling",
+             "details": "long text", "published": ts(3),
+             "severity": [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}]},
+            {"id": "CVE-2026-50001", "summary": "same bug, CVE record", "published": ts(3)},     # collapses into above
+            {"id": "GHSA-bbbb", "summary": "v4 only", "published": ts(10),
+             "severity": [{"type": "CVSS_V4", "score": "CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N"}],
+             "database_specific": {"severity": "HIGH"}},
+            {"id": "GHSA-cccc", "summary": "pulled", "published": ts(5), "withdrawn": ts(1)},
+            {"id": "MAL-2026-1", "summary": "malicious version published", "published": ts(2)},
+        ]
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            st = process_osv_vulns(vulns, db, "npm-ip-address", "npm ip-address", {"llm_tag_min_cvss": 8.0})
+            self.assertEqual((st["seen"], st["signals"], st["queued"], st["withdrawn"], st["malicious"]),
+                             (5, 3, 1, 1, 1))
+            sigs = {s["cve"] or s["title"]: s for s in db.signals_since("2000")}
+            self.assertEqual(len(sigs), 2)                                 # GHSA+CVE pair is one signal
+            self.assertEqual(sigs["CVE-2026-50001"]["cvss"], 9.8)
+            self.assertEqual(sigs["CVE-2026-50001"]["origin"], "osv")
+            self.assertTrue(sigs["CVE-2026-50001"]["observed_at"].endswith("+00:00"))
+            self.assertIsNone(sigs["npm ip-address: v4 only"]["cvss"])          # no bands configured
+            pending = db.pending_intel(10)
+            self.assertEqual([p["source"] for p in pending], ["osv"])    # only the 9.8 is queued for tagging
+            self.assertEqual(process_osv_vulns(vulns, db, "npm-ip-address", "npm ip-address", {})["queued"], 0)
+            # Claude's surface tags land on the deterministic signal, as for NVD
+            ctx = types.SimpleNamespace(db=db, components=COMPS)
+            row = dict(pending[0])
+            apply_findings(ctx, {"d0": row}, [{"item_ref": "d0", "relevant": True, "components": ["npm-ip-address"],
+                                               "surfaces": ["ip-canonicalization"], "confidence": 0.9,
+                                               "unmapped_names": [], "upstream_components": []}])
+            self.assertEqual(db.signals_since("2000")[0]["surfaces"], ["ip-canonicalization"])
+            self.assertEqual(sum(1 for s in db.signals_since("2000") if s["surfaces"]), 1)
+
+    def test_v4_only_records_use_advisory_severity_band(self):
+        from app.collectors.osv import best_cvss
+        bands = {"CRITICAL": 9.0, "HIGH": 7.0, "MODERATE": 4.0, "LOW": 1.0}
+        v4 = {"severity": [{"type": "CVSS_V4", "score": "CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:L/VI:N/VA:N/SC:N/SI:N/SA:N"}],
+              "database_specific": {"severity": "MODERATE"}}
+        self.assertEqual(best_cvss(v4, bands), 4.0)
+        self.assertIsNone(best_cvss(v4, None))
+        both = {**v4, "severity": v4["severity"] + [{"type": "CVSS_V3", "score": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"}]}
+        self.assertEqual(best_cvss(both, bands), 9.8)          # an exact v3 score always wins over the band
+        self.assertIsNone(best_cvss({"database_specific": {"severity": "WEIRD"}}, bands))
+
+    def test_collect_skips_packages_outside_catalog(self):
+        import asyncio
+        from app.collectors.osv import collect_osv
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            total = asyncio.run(collect_osv(None, db, {}, [{"ecosystem": "npm", "name": "x", "component": "nope"}], COMPS))
+            self.assertEqual(total["packages"], 0)
+            self.assertEqual(len(total["skipped"]), 1)
+
+    def test_package_components_are_visibility_gaps(self):
+        inv = aggregate([{"host": "a", "name": "node"}], None, Matcher(COMPS), COMPS, [])
+        self.assertEqual(inv["npm-ip-address"]["status"], "unknown")
+        self.assertEqual(inv["npm-fast-uri"]["status"], "unknown")
+        r = by_id(score_all(COMPS, [sig("npm-ip-address", surfaces=["ip-canonicalization"])], {}, CFG, NOW))
+        self.assertGreater(r["curl"]["points"]["spillover"], 0)      # package activity spills to shared surfaces
+
+
 class Backtest(unittest.TestCase):
     def test_runs_on_synthetic_catalog(self):
         from scripts.backtest import run

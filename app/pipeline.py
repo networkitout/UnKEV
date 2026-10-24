@@ -10,6 +10,7 @@ from . import llm
 from .collectors.epss import collect_epss
 from .collectors.kev import collect_kev
 from .collectors.nvd import collect_nvd
+from .collectors.osv import collect_osv
 from .collectors.rss import collect_rss
 from .config import get_settings, load_yaml
 from .db import DB, iso, utcnow
@@ -31,6 +32,7 @@ class Ctx:
         validate_config(self.scoring)
         self.inventory_cfg = load_yaml("inventory.yaml")
         self.appliances = load_yaml("appliances.yaml").get("appliances") or []
+        self.packages = load_yaml("packages.yaml").get("packages") or []
         self.matcher = Matcher(self.components, self.feeds.get("prefilter_terms") or [])
 
     def client(self, **kw):
@@ -58,6 +60,8 @@ async def job_collect(ctx: Ctx):
             await _job(ctx, "kev", collect_kev(c, ctx.db, ctx.matcher, f["kev"]))
         if f.get("nvd", {}).get("enabled"):
             await _job(ctx, "nvd", collect_nvd(c, ctx.db, ctx.matcher, f["nvd"], ctx.settings.nvd_api_key))
+        if f.get("osv", {}).get("enabled"):
+            await _job(ctx, "osv", collect_osv(c, ctx.db, f["osv"], ctx.packages, ctx.components))
         if f.get("rss", {}).get("enabled"):
             await _job(ctx, "rss", collect_rss(c, ctx.db, ctx.matcher, f["rss"]))
 
@@ -85,7 +89,7 @@ def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
                     continue
                 ctx.db.note_embed_candidate(host, up, row["url"], f.get("evidence"))
                 stats["edges"] += 1
-        if row["source"] == "nvd":
+        if row["source"] in ("nvd", "osv"):
             # Deterministic signals already exist; Claude only adds surface tags.
             stats["tagged"] += ctx.db.tag_signals_for_intel(row["id"], f["surfaces"], f["confidence"])
         else:

@@ -31,6 +31,13 @@ Out of a forecast review on 2026-10-23: PHP2Shell propagated along *dependency* 
 - `db.exploited_recent` lists KEV entries from the last 30 days whether or not they map to the catalog, plus signals with confirmed exploitation, one row per CVE, newest first. Unmapped products read "not in catalog".
 - Shown to the right of the forecast/detail split on wide screens, under it otherwise. No scoring change: this separates exploitation pressure from the discovery pressure the ranking models.
 
+### OSV collector for package-level parsers
+
+- New `config/packages.yaml` allowlist maps npm/PyPI packages to catalog components. OSV is queried per listed package (`POST /v1/query`), never crawled. Starter set: `ip-address` and `fast-uri`, as new `ecosystem: package` components carrying the `ip-canonicalization` surface.
+- OSV carries CVSS vectors, not scores: v3 vectors are scored with the CVSS 3.1 formula; v4-only records (GHSA since 2025) take the advisory's own qualitative severity mapped to the bottom of its CVSS band via `osv.severity_bands`.
+- Withdrawn and `MAL-` records are skipped; GHSA and CVE records for one bug collapse into one signal. Entries at or above 7.0 are queued for Claude surface tagging so package bugs can spill onto shared surfaces.
+- `package` joins the library ecosystems: absence from host inventory is a visibility gap, not absence.
+
 ### Weight rebalance
 
 | term | 0.1 | 0.2 |
@@ -52,6 +59,7 @@ Half-lives: inherited 45 days (new); others unchanged.
 
 ### Other
 
+- The inventory adapter is named for what it is: `app/inventory.py`, `config/inventory.yaml`, `scripts/inventory_probe.py`, `fixtures/inventory.json`, `INVENTORY_API_TOKEN`. It works against any CMDB or asset API returning per-host software/OS records.
 - CSV export includes the inherited term.
 - Extraction stats report `edges` proposed per batch.
 - New `AGENTS.md` and `docs/agents/` for the engineering skills (GitHub issue tracker, triage labels, domain docs).

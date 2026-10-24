@@ -1,7 +1,8 @@
 """Inventory adapter: any CMDB or asset API that returns per-host records.
 
-Config-driven (config/inventory.yaml) so no route or schema is pinned here. Records are normalized to {host, name, version, os,
-internet_facing, criticality}, matched to catalog components, and aggregated.
+Config-driven (config/inventory.yaml) so no route or schema is pinned here.
+Records are normalized to {host, name, version, os, internet_facing,
+criticality}, matched to catalog components, and aggregated.
 
 Exposure status semantics:
   known     source returned records and at least one host matched
@@ -38,10 +39,11 @@ def _truthy(v) -> bool:
 
 
 # Host application inventory (Falcon Discover, Intune, etc.) usually lists
-# applications and OS packages, not libraries vendored inside other software.
-# For these ecosystems a miss is "unknown", never "none".
+# applications and OS packages, not libraries vendored inside other software
+# or npm/PyPI packages inside applications. For these ecosystems a miss is
+# "unknown", never "none".
 LIBRARY_ECOSYSTEMS = {"compression", "archive", "parser", "codec", "dns-lib", "system-lib",
-                      "crypto-lib", "client-lib", "embedded-db"}
+                      "crypto-lib", "client-lib", "embedded-db", "package"}
 
 
 def absence_means(component: dict) -> str:

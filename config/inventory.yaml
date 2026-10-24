@@ -1,8 +1,7 @@
 # Inventory adapter: your CMDB, asset system or EDR exposure API.
 #
 # The endpoint paths and field names below are PLACEHOLDERS. Point them at
-# whatever route returns
-# per-host software (or host + OS) records, then run:
+# whatever route returns per-host software (or host + OS) records, then run:
 #   python -m scripts.inventory_probe
 # which fetches one page and shows how each record maps.
 #

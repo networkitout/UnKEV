@@ -31,6 +31,12 @@
 # ecosystem mgmt-server: management servers that host inventory does see
 # (unlike appliances), so absence from inventory is meaningful.
 #
+# ecosystem package: a library tracked at package level through OSV
+# (config/packages.yaml). Host inventory never sees these, so absence is a
+# visibility gap. No aliases on purpose: names like "ip-address" are
+# ordinary prose. OSV matches by exact package name; Claude maps news by
+# the catalog name it is shown.
+#
 # inventory.absence_means: "none" | "unknown". Default is "unknown" for
 # library ecosystems (host app inventory rarely sees vendored libraries) and
 # "none" otherwise. A miss on an "unknown" component is a visibility gap.
@@ -424,3 +430,17 @@ cb-app-control:
   inventory: {software: ["carbon black app control"]}
   embeds:
     - {component: php, evidence: "Broadcom advisories 39404/39411: App Control Server Affected; updated-PHP builds 8.12.2 and 8.13.2 (2026-10-22)", confirmed: false}
+
+npm-ip-address:
+  name: ip-address (npm)
+  ecosystem: package
+  priors: {memory_unsafe: 0, preauth: 2, install_base: 2, embedding: 3, legacy_tail: 2}
+  surfaces: [ip-canonicalization]
+  inventory: {}
+
+npm-fast-uri:
+  name: fast-uri (npm)
+  ecosystem: package
+  priors: {memory_unsafe: 0, preauth: 2, install_base: 2, embedding: 3, legacy_tail: 1}
+  surfaces: [ip-canonicalization, http-parsing]
+  inventory: {}

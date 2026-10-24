@@ -1,0 +1,18 @@
+# Package-level sources. Host inventory and NVD CPE matching can't see
+# libraries that live inside applications as npm/PyPI/Go packages, so the
+# catalog couldn't see the IP-canonicalization activity in ip-address and
+# fast-uri. OSV is queried per package listed here and nothing else: keep
+# this an allowlist, not a crawl. One small request per package per run.
+#
+# Each entry maps one package to a catalog component, normally a dedicated
+# `ecosystem: package` component in components.yaml so the package carries
+# its own priors and surfaces. Map to an existing component only when the
+# package IS that component's code. A binding that vendors a C library is
+# an `embeds` edge on components.yaml instead, not an entry here.
+#
+# ecosystem uses OSV's names (npm, PyPI, Go, crates.io, Maven, RubyGems).
+# TODO(verify) against https://ossf.github.io/osv-schema/#affectedpackage-field
+
+packages:
+  - {ecosystem: npm, name: ip-address, component: npm-ip-address}
+  - {ecosystem: npm, name: fast-uri, component: npm-fast-uri}
