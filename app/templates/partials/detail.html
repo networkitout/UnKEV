@@ -6,7 +6,7 @@
   <div class="formula">likelihood {{ "%.1f"|format(r.likelihood) }} × exposure factor {{ "%.2f"|format(r.exposure_factor) }}{% if r.exposure_status == 'unknown' %} (assumed, no inventory evidence){% endif %}</div>
 
   <div class="terms">
-    {% for k in ['prior', 'activity', 'spillover', 'exploit'] %}{% set cap = r.term_max[k] %}
+    {% for k in ['prior', 'activity', 'spillover', 'inherited', 'exploit'] %}{% set cap = r.term_max[k] %}
       <span>{{ k }}</span>
       <div class="track"><div class="fill {{ k }}" style="width: {{ (100 * r.points[k] / cap)|round|int }}%"></div></div>
       <span class="num">{{ r.points[k] }}</span>
@@ -39,8 +39,8 @@
   <ul class="drivers">
     {% for d in r.drivers %}
       <li>
-        <div class="{{ 'kind-spillover' if d.kind == 'spillover' }}">{% if d.url %}<a href="{{ d.url }}" rel="noopener noreferrer" target="_blank">{{ d.label }}</a>{% else %}{{ d.label }}{% endif %}</div>
-        <div class="meta">{{ 'spillover' if d.kind == 'spillover' else 'direct' }}, {{ origin_label(d.origin) }}, {{ ago(d.observed_at) }}</div>
+        <div class="kind-{{ d.kind }}">{% if d.url %}<a href="{{ d.url }}" rel="noopener noreferrer" target="_blank">{{ d.label }}</a>{% else %}{{ d.label }}{% endif %}</div>
+        <div class="meta">{{ d.kind }}, {{ origin_label(d.origin) }}, {{ ago(d.observed_at) }}</div>
         {% if d.evidence %}<div class="ev">{{ d.evidence[:220] }}</div>{% endif %}
       </li>
     {% endfor %}

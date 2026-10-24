@@ -67,12 +67,20 @@ Runtime components such as PHP and Node need per-host *application* inventory, f
 
 ## Scoring model (`config/scoring.yaml`)
 
-`likelihood` (0-100) is the sum of four weighted terms:
+`likelihood` (0-100) is the sum of five weighted terms:
 
 - **prior:** structural risk from `components.yaml`, made up of memory safety, pre-auth parsing, install base, embedding and legacy tail. These are analyst estimates; tune them with the backtest.
 - **activity:** recent CVEs on the component, weighted by severity, emergency release, public PoC and broken embargo, with a 21-day half-life.
 - **exploit:** the maximum of KEV, confirmed or attempted exploitation, and EPSS, with a 45-day half-life.
 - **spillover:** the predictive term. When an attack surface (for example `ip-canonicalization`) breaks in one component, every other component sharing that surface gets a decayed bump. Half-life is 30 days.
+- **inherited:** the dependency term. When a component breaks, every product whose catalog entry says it `embeds` that component gets a decayed bump, scaled by the product's `vendor_lag` prior and down-weighted while the edge is unconfirmed. Half-life is 45 days. Exploitation is never inherited: exploitability inside the host product often differs.
+
+### Two kinds of `embeds`
+
+- **catalog `embeds`** (`components.yaml`): the product line bundles X. Drives *likelihood* through the inherited term. Each edge carries evidence and a `confirmed` flag; flip it only after reading the vendor's own advisory.
+- **`appliances.yaml` `embeds`**: our deployed box contains X. Drives *exposure* by adding the appliance's hosts to X.
+
+Claude never writes catalog edges. When extracted intel says a product is affected because it bundles another catalog component, the pair lands in the "Proposed dependency edges" panel; a human decides whether to add it to `components.yaml`.
 
 `priority = likelihood × (0.35 + 0.65 × exposure)`. The floor keeps unknown or low-exposure components visible on the forecast. Every snapshot stores its term points and driver signals, which the detail panel shows.
 

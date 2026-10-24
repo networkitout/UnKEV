@@ -81,12 +81,14 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
     hl = cfg["half_life_days"]
     bonus = cfg["bonuses"]
     lv = cfg["exploit_levels"]
+    inh = cfg["inherited"]
     wsum = sum(w.values())
     max_age = cfg.get("max_signal_age_days", 180)
 
     activity = {cid: 0.0 for cid in components}
     spill = {cid: 0.0 for cid in components}
     exploit = {cid: 0.0 for cid in components}
+    inherited = {cid: 0.0 for cid in components}
     drivers: dict[str, list[tuple[float, dict]]] = {cid: [] for cid in components}
     surface_heat: dict[str, float] = {}
 
@@ -94,6 +96,14 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
     for cid, c in components.items():
         for s in c.get("surfaces") or []:
             surf_index.setdefault(s, set()).add(cid)
+
+    # upstream component -> [(host that bundles it, edge)]. No self-edges.
+    embedded_in: dict[str, list[tuple[str, dict]]] = {}
+    for cid, c in components.items():
+        for edge in c.get("embeds") or []:
+            up = edge.get("component")
+            if up and up != cid and up in components:
+                embedded_in.setdefault(up, []).append((cid, edge))
 
     for s in signals:
         cid = s["component_id"]
@@ -104,12 +114,29 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
             continue
         conf = float(s.get("confidence", 0.7))
 
-        a = sev_weight(s.get("cvss"))
-        a += bonus["emergency_release"] * bool(s.get("emergency"))
-        a += bonus["poc_public"] * bool(s.get("poc_public"))
-        a += bonus["embargo_broken"] * bool(s.get("embargo_broken"))
-        a *= decay(age, hl["activity"]) * conf
+        raw = sev_weight(s.get("cvss"))
+        raw += bonus["emergency_release"] * bool(s.get("emergency"))
+        raw += bonus["poc_public"] * bool(s.get("poc_public"))
+        raw += bonus["embargo_broken"] * bool(s.get("embargo_broken"))
+        a = raw * decay(age, hl["activity"]) * conf
         activity[cid] += a
+
+        # Inherited: a bug in X raises likelihood for every product that bundles X.
+        # Exploitation is deliberately NOT inherited. Exploitability inside the host
+        # product often differs: Palo Alto scored PHP2Shell on PAN-OS as
+        # availability-only, CVSS-B 8.7.
+        for host, edge in embedded_in.get(cid, []):
+            edge_w = 1.0 if edge.get("confirmed") else inh["unconfirmed_edge_weight"]
+            lag_min = inh["lag_factor_min"]
+            lag = lag_min + (1 - lag_min) * (components[host].get("priors") or {}).get("vendor_lag", 0) / 3
+            contrib = raw * decay(age, hl["inherited"]) * conf * edge_w * lag
+            inherited[host] += contrib
+            label = f"{components[cid]['name']} {s.get('cve') or 'signal'} bundled in {components[host]['name']}"
+            if not edge.get("confirmed"):
+                label += " (unconfirmed edge)"
+            drivers[host].append((contrib, {"kind": "inherited", "label": label, "url": s.get("url"),
+                                            "origin": s.get("origin"), "observed_at": s["observed_at"],
+                                            "evidence": edge.get("evidence")}))
 
         level = 1.0 if s.get("kev") else lv.get(s.get("exploitation") or "unknown", 0.0)
         if s.get("epss") is not None:
@@ -145,6 +172,7 @@ def score_all(components: dict[str, dict], signals: list[dict], inventory: dict[
             "prior": prior_score(c.get("priors")),
             "activity": saturate(activity[cid]),
             "spillover": saturate(spill[cid]),
+            "inherited": saturate(inherited[cid]),
             "exploit": min(exploit[cid], 1.0),
         }
         points = {k: round(100 * w[k] * v / wsum, 1) for k, v in terms.items()}

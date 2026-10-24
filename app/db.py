@@ -38,6 +38,12 @@ CREATE TABLE IF NOT EXISTS unmapped (
   mentions INTEGER NOT NULL DEFAULT 1, example_url TEXT
 );
 
+CREATE TABLE IF NOT EXISTS embed_candidates (
+  host TEXT NOT NULL, upstream TEXT NOT NULL, first_seen TEXT, last_seen TEXT,
+  mentions INTEGER NOT NULL DEFAULT 1, example_url TEXT, evidence TEXT,
+  PRIMARY KEY (host, upstream)
+);
+
 CREATE TABLE IF NOT EXISTS inventory (
   component_id TEXT PRIMARY KEY, status TEXT NOT NULL,  -- known|none|unknown|declared
   hosts INTEGER NOT NULL DEFAULT 0, internet_facing INTEGER NOT NULL DEFAULT 0,
@@ -195,6 +201,24 @@ class DB:
     def top_unmapped(self, limit: int = 15) -> list[sqlite3.Row]:
         with self.conn() as c:
             return c.execute("SELECT * FROM unmapped ORDER BY mentions DESC, last_seen DESC LIMIT ?",
+                             (limit,)).fetchall()
+
+    # --- embed candidates (LLM proposes, a human edits components.yaml) --
+    def note_embed_candidate(self, host: str, upstream: str, url: str | None = None,
+                             evidence: str | None = None) -> None:
+        now = iso(utcnow())
+        with self.conn() as c:
+            c.execute(
+                """INSERT INTO embed_candidates(host,upstream,first_seen,last_seen,mentions,example_url,evidence)
+                   VALUES(?,?,?,?,1,?,?) ON CONFLICT(host,upstream) DO UPDATE SET
+                   last_seen=excluded.last_seen, mentions=embed_candidates.mentions+1,
+                   example_url=COALESCE(excluded.example_url, embed_candidates.example_url),
+                   evidence=COALESCE(excluded.evidence, embed_candidates.evidence)""",
+                (host, upstream, now, now, url, evidence))
+
+    def embed_candidates(self, limit: int = 15) -> list[sqlite3.Row]:
+        with self.conn() as c:
+            return c.execute("SELECT * FROM embed_candidates ORDER BY mentions DESC, last_seen DESC LIMIT ?",
                              (limit,)).fetchall()
 
     # --- inventory ------------------------------------------------------

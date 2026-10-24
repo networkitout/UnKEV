@@ -131,6 +131,7 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         "brief_ago": ago(brief["ts"]) if brief else None,
         "grid": spill_grid(ctx, rows, signals),
         "unmapped": [dict(u) for u in ctx.db.top_unmapped(12)],
+        "embed_candidates": [dict(e) for e in ctx.db.embed_candidates(12)],
         "runs": runs,
         "tokens_today": ctx.db.usage_today(),
         "token_budget": ctx.settings.llm_daily_token_budget,

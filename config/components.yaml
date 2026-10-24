@@ -8,9 +8,28 @@
 #   install_base   how widely deployed
 #   embedding      how often it ships *inside* other products / appliances
 #   legacy_tail    how many EOL deployments linger in the wild
+#   vendor_lag     (appliances and mgmt servers) how slowly the vendor ships
+#                  fixes for bundled upstream bugs. Used only by the inherited
+#                  term, never by prior_score. The values below are judgment
+#                  calls, not measured.
 #
 # surfaces use the fixed vocabulary in app/vocab.py. Spillover flows
 # between components that share a surface.
+#
+# embeds: dependency edges for the inherited term. "This product line bundles
+# X" raises the product's *likelihood* when X breaks. This is different from
+# appliances.yaml `embeds`, which says "our deployed box contains X" and
+# drives *exposure*. Each edge records its evidence and whether a human has
+# confirmed it against the vendor's own advisory; unconfirmed edges are
+# down-weighted (scoring.yaml inherited.unconfirmed_edge_weight). Exploitation
+# is never inherited along these edges.
+#   embeds:
+#     - component: php
+#       evidence: "vendor advisory, date"
+#       confirmed: false
+#
+# ecosystem mgmt-server: management servers that host inventory does see
+# (unlike appliances), so absence from inventory is meaningful.
 #
 # inventory.absence_means: "none" | "unknown". Default is "unknown" for
 # library ecosystems (host app inventory rarely sees vendored libraries) and
@@ -305,27 +324,33 @@ exchange:
 netscaler:
   name: Citrix NetScaler ADC/Gateway
   ecosystem: appliance
-  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3, vendor_lag: 2}
   surfaces: [vpn-gateway, http-parsing, session-state, mgmt-plane]
   aliases: ["NetScaler", "Citrix ADC", "Citrix Gateway", "CitrixBleed"]
   cpe: ["citrix:netscaler_application_delivery_controller", "citrix:netscaler_gateway"]
   kev: [["citrix", "netscaler|adc|gateway"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+  embeds:
+    - {component: php, evidence: "SINGLE SECONDARY SOURCE: tracker lists NetScaler management interfaces as not fixed for PHP2Shell (2026-10-23). No Citrix advisory seen yet.", confirmed: false}
 
 panos:
   name: Palo Alto PAN-OS
   ecosystem: appliance
-  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 2}
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 2, vendor_lag: 2}
   surfaces: [vpn-gateway, mgmt-plane, http-parsing]
   aliases: ["PAN-OS", "GlobalProtect"]
   cpe: ["paloaltonetworks:pan-os"]
   kev: [["palo alto", "pan-os|globalprotect"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+  embeds:
+    - component: php
+      evidence: "Palo Alto PHP2Shell advisory: PAN-OS 10.2-12.2 and all Panorama versions affected, fix ETA TBD (reported 2026-10-22)"
+      confirmed: false   # flip to true after reading the vendor advisory yourself
 
 ivanti-ics:
   name: Ivanti Connect Secure
   ecosystem: appliance
-  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3, vendor_lag: 3}
   surfaces: [vpn-gateway, http-parsing, mgmt-plane]
   aliases: ["Ivanti Connect Secure", "Pulse Secure", "Ivanti Policy Secure"]
   cpe: ["ivanti:connect_secure", "ivanti:policy_secure"]
@@ -335,7 +360,7 @@ ivanti-ics:
 fortios:
   name: Fortinet FortiOS
   ecosystem: appliance
-  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3, vendor_lag: 2}
   surfaces: [vpn-gateway, mgmt-plane, http-parsing]
   aliases: ["FortiOS", "FortiGate", "FortiProxy"]
   cpe: ["fortinet:fortios", "fortinet:fortiproxy"]
@@ -345,9 +370,57 @@ fortios:
 cisco-asyncos:
   name: Cisco Secure Email (AsyncOS)
   ecosystem: appliance
-  priors: {memory_unsafe: 1, preauth: 3, install_base: 1, embedding: 0, legacy_tail: 2}
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 1, embedding: 0, legacy_tail: 2, vendor_lag: 2}
   surfaces: [document-parser, archive, mgmt-plane]
   aliases: ["AsyncOS", "Secure Email Gateway", "Cisco ESA"]
   cpe: ["cisco:asyncos"]
   kev: [["cisco", "asyncos|secure email|email security"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+
+f5-bigip:
+  name: F5 BIG-IP
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3, vendor_lag: 2}
+  surfaces: [mgmt-plane, http-parsing, vpn-gateway]
+  aliases: ["BIG-IP", "F5 BIG-IP", "TMUI"]
+  cpe: ["f5:big-ip_local_traffic_manager", "f5:big-ip_access_policy_manager"]   # TODO(verify) CPE product names
+  kev: [["^f5$", "big-ip"]]
+  inventory: {}
+  embeds:
+    - {component: php, evidence: "F5 K000163821: Configuration utility affected, 21.1.0, 17.5.0-17.5.1, 17.1.0-17.1.3, not fixed (secondary report 2026-10-23)", confirmed: false}
+
+cisco-expressway:
+  name: Cisco Expressway
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 1, embedding: 0, legacy_tail: 2, vendor_lag: 2}
+  surfaces: [mgmt-plane, http-parsing]
+  aliases: ["Expressway", "Expressway Select"]
+  cpe: ["cisco:expressway"]   # TODO(verify)
+  kev: [["cisco", "expressway"]]
+  inventory: {}
+  embeds:
+    - {component: php, evidence: "Cisco CSCwx37062: Expressway and Expressway Select affected, Critical, fixed in 15.5.21, no workaround (reported 2026-10-22)", confirmed: false}
+
+symantec-sepm:
+  name: Symantec Endpoint Protection Manager
+  ecosystem: mgmt-server
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 1, embedding: 0, legacy_tail: 3, vendor_lag: 2}
+  surfaces: [mgmt-plane, http-parsing]
+  aliases: ["SEPM", "Symantec Endpoint Protection Manager"]
+  cpe: ["broadcom:symantec_endpoint_protection_manager"]   # TODO(verify)
+  kev: [["broadcom|symantec", "endpoint protection"]]
+  inventory: {software: ["symantec endpoint protection manager"]}
+  embeds:
+    - {component: php, evidence: "Broadcom advisory 39421: SEPM listed Affected by PHP2Shell (2026-10-22)", confirmed: false}
+
+cb-app-control:
+  name: Carbon Black App Control Server
+  ecosystem: mgmt-server
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 1, embedding: 0, legacy_tail: 2, vendor_lag: 1}
+  surfaces: [mgmt-plane, http-parsing]
+  aliases: ["App Control Server", "Carbon Black App Control"]
+  cpe: ["vmware:carbon_black_app_control"]   # TODO(verify)
+  kev: [["vmware|broadcom", "carbon black app control"]]
+  inventory: {software: ["carbon black app control"]}
+  embeds:
+    - {component: php, evidence: "Broadcom advisories 39404/39411: App Control Server Affected; updated-PHP builds 8.12.2 and 8.13.2 (2026-10-22)", confirmed: false}

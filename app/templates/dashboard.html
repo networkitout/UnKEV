@@ -96,16 +96,30 @@
   </section>
 
   <div class="pair">
-    <section class="panel" aria-labelledby="um-h">
-      <h2 id="um-h">Not in the catalog <span class="muted">vulnerable tech mentioned in intel that nothing maps to</span></h2>
-      {% if unmapped %}
-      <table><thead><tr><th>Name</th><th class="num">Mentions</th><th>Source</th><th>Last seen</th></tr></thead>
-        <tbody>{% for u in unmapped %}
-          <tr><td>{% if u.example_url %}<a href="{{ u.example_url }}" rel="noopener noreferrer" target="_blank">{{ u.name }}</a>{% else %}{{ u.name }}{% endif %}</td>
-            <td class="num">{{ u.mentions }}</td><td class="muted">{{ origin_label(u.source) }}</td><td class="muted">{{ ago(u.last_seen) }}</td></tr>
-        {% endfor %}</tbody></table>
-      {% else %}<p class="empty">Everything seen so far maps to a catalog component.</p>{% endif %}
-    </section>
+    <div class="stack">
+      <section class="panel" aria-labelledby="um-h">
+        <h2 id="um-h">Not in the catalog <span class="muted">vulnerable tech mentioned in intel that nothing maps to</span></h2>
+        {% if unmapped %}
+        <table><thead><tr><th>Name</th><th class="num">Mentions</th><th>Source</th><th>Last seen</th></tr></thead>
+          <tbody>{% for u in unmapped %}
+            <tr><td>{% if u.example_url %}<a href="{{ u.example_url }}" rel="noopener noreferrer" target="_blank">{{ u.name }}</a>{% else %}{{ u.name }}{% endif %}</td>
+              <td class="num">{{ u.mentions }}</td><td class="muted">{{ origin_label(u.source) }}</td><td class="muted">{{ ago(u.last_seen) }}</td></tr>
+          {% endfor %}</tbody></table>
+        {% else %}<p class="empty">Everything seen so far maps to a catalog component.</p>{% endif %}
+      </section>
+
+      <section class="panel" aria-labelledby="pe-h">
+        <h2 id="pe-h">Proposed dependency edges
+          <span class="muted">intel says a product bundles a catalog component. Claude proposes; a human edits components.yaml</span></h2>
+        {% if embed_candidates %}
+        <table><thead><tr><th>Host</th><th>Bundles</th><th class="num">Mentions</th><th>Last seen</th><th>Evidence</th></tr></thead>
+          <tbody>{% for e in embed_candidates %}
+            <tr><td>{{ e.host }}</td><td>{{ e.upstream }}</td><td class="num">{{ e.mentions }}</td><td class="muted">{{ ago(e.last_seen) }}</td>
+              <td class="muted">{% if e.example_url %}<a href="{{ e.example_url }}" rel="noopener noreferrer" target="_blank">{{ (e.evidence or 'source')[:120] }}</a>{% else %}{{ (e.evidence or '')[:120] }}{% endif %}</td></tr>
+          {% endfor %}</tbody></table>
+        {% else %}<p class="empty">No proposed edges yet. They appear when extracted intel says a product is affected because it bundles another catalog component.</p>{% endif %}
+      </section>
+    </div>
 
     <section class="panel health" aria-labelledby="fh-h">
       <h2 id="fh-h">Feed health</h2>

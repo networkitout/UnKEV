@@ -31,6 +31,7 @@ For every document, call record_findings once with one finding per document.
 Rules:
 - relevant=false for anything that isn't about a software vulnerability, exploit, or security patch.
 - components: use catalog IDs from the provided list when the document is about that technology. If a vulnerable technology is clearly named but is not in the catalog, put its common name in unmapped_names instead. Do not guess catalog IDs.
+- upstream_components: only when the document states that a product is affected because it bundles or embeds another catalog component. List the bundled component here and the product itself in components. Do not infer dependencies the document doesn't state.
 - surfaces: tag the attack surface(s) where the bug lives, only from the allowed list, and only when the document gives enough detail to tell. Empty is better than a guess.
 - exploitation: "confirmed" only if the document reports successful in-the-wild exploitation or KEV listing; "attempts" for reported attempts, scanning, or honeypot hits; "none" if it states no exploitation is known; otherwise "unknown".
 - emergency_release: true only for out-of-band, pre-announced emergency, or zero-day patch releases.
@@ -54,6 +55,11 @@ def _tool_schema(catalog_ids: list[str]) -> dict:
                             "item_ref": {"type": "string"},
                             "relevant": {"type": "boolean"},
                             "components": {"type": "array", "items": {"type": "string", "enum": catalog_ids}},
+                            "upstream_components": {
+                                "type": "array", "items": {"type": "string", "enum": catalog_ids},
+                                "description": "If the document says a product is affected because it bundles or "
+                                               "embeds another component, list the bundled component here; list "
+                                               "the product itself in components."},
                             "unmapped_names": {"type": "array", "items": {"type": "string"}},
                             "cves": {"type": "array", "items": {"type": "string"}},
                             "surfaces": {"type": "array", "items": {"type": "string", "enum": list(SURFACES)}},
@@ -125,6 +131,7 @@ def validate_findings(payload: Any, refs: set[str], catalog_ids: set[str]) -> li
             "item_ref": ref,
             "relevant": bool(f.get("relevant")),
             "components": [c for c in f.get("components") or [] if c in catalog_ids],
+            "upstream_components": [c for c in f.get("upstream_components") or [] if c in catalog_ids],
             "unmapped_names": [str(n)[:80] for n in (f.get("unmapped_names") or [])[:5]],
             "cves": sorted({c.upper() for c in f.get("cves") or [] if isinstance(c, str) and _CVE.match(c)}),
             "surfaces": [s for s in f.get("surfaces") or [] if s in SURFACES],
@@ -186,6 +193,7 @@ Rules:
 - Every factual claim about a vulnerability must come from the provided drivers or evidence. Mark it [verified: <origin>] when a driver's origin is kev or nvd, and [reported: <origin>] for llm-extracted news.
 - Anything you infer beyond the data (likely variants, what to check next) is marked [inferred].
 - Call out components where exposure_status is "unknown". Unknown is a visibility gap, not a clean bill of health.
+- For inherited drivers, name the bundled upstream component and say whether the evidence is an unconfirmed edge.
 - End with up to three concrete next actions tied to specific components."""
 
 

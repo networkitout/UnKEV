@@ -2,17 +2,24 @@
 # Tune with scripts/backtest.py; commit changes so scores stay reproducible.
 version: 1
 
-# Likelihood = weighted sum of four terms, scaled to 0-100.
+# Likelihood = weighted sum of five terms, scaled to 0-100.
 weights:
-  prior: 0.25       # structural risk of the component (components.yaml priors)
-  activity: 0.30    # recent CVEs / emergency releases on the component itself
-  spillover: 0.20   # same attack surface just broke somewhere else (variant analysis)
+  prior: 0.20       # structural risk of the component (components.yaml priors)
+  activity: 0.25    # recent CVEs / emergency releases on the component itself
+  spillover: 0.15   # same attack surface just broke somewhere else (variant analysis)
   exploit: 0.25     # KEV, confirmed or attempted exploitation, EPSS
+  inherited: 0.15   # a component this product bundles (components.yaml embeds) just broke
 
 half_life_days:
   activity: 21
   spillover: 30
   exploit: 45
+  inherited: 45          # vendor fixes for bundled components lag; decay slower than activity
+
+# Inherited risk along catalog `embeds` edges. Exploitation is never inherited.
+inherited:
+  unconfirmed_edge_weight: 0.6   # edge not yet checked against the vendor's own advisory
+  lag_factor_min: 0.5            # lag_factor = min + (1 - min) * vendor_lag / 3
 
 # Per-signal bonuses added to activity before saturation.
 bonuses:

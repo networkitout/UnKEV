@@ -61,8 +61,12 @@ async def job_collect(ctx: Ctx):
             await _job(ctx, "rss", collect_rss(c, ctx.db, ctx.matcher, f["rss"]))
 
 
+def _catalog_edge(components: dict, host: str, upstream: str) -> bool:
+    return any(e.get("component") == upstream for e in (components.get(host) or {}).get("embeds") or [])
+
+
 def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
-    stats = {"relevant": 0, "signals": 0, "tagged": 0}
+    stats = {"relevant": 0, "signals": 0, "tagged": 0, "edges": 0}
     done = set()
     for f in findings:
         row = rows_by_ref[f["item_ref"]]
@@ -73,6 +77,13 @@ def apply_findings(ctx: Ctx, rows_by_ref: dict, findings: list[dict]) -> dict:
             ctx.db.mark_intel(row["id"], "extracted")
             continue
         stats["relevant"] += 1
+        # Dependency edges are proposals only; a human adds them to components.yaml.
+        for host in f["components"]:
+            for up in f.get("upstream_components") or []:
+                if up == host or _catalog_edge(ctx.components, host, up):
+                    continue
+                ctx.db.note_embed_candidate(host, up, row["url"], f.get("evidence"))
+                stats["edges"] += 1
         if row["source"] == "nvd":
             # Deterministic signals already exist; Claude only adds surface tags.
             stats["tagged"] += ctx.db.tag_signals_for_intel(row["id"], f["surfaces"], f["confidence"])
@@ -99,7 +110,7 @@ async def job_extract(ctx: Ctx, max_batches: int = 10):
     s = ctx.settings
     if not s.anthropic_api_key:
         return {"skipped": "ANTHROPIC_API_KEY not set"}
-    total = {"batches": 0, "relevant": 0, "signals": 0, "tagged": 0, "tokens": 0}
+    total = {"batches": 0, "relevant": 0, "signals": 0, "tagged": 0, "edges": 0, "tokens": 0}
     async with ctx.client() as c:
         for _ in range(max_batches):
             if ctx.db.usage_today() >= s.llm_daily_token_budget:
@@ -122,7 +133,7 @@ async def job_extract(ctx: Ctx, max_batches: int = 10):
             st = apply_findings(ctx, by_ref, findings)
             total["batches"] += 1
             total["tokens"] += tin + tout
-            for k in ("relevant", "signals", "tagged"):
+            for k in ("relevant", "signals", "tagged", "edges"):
                 total[k] += st[k]
     return total
 
