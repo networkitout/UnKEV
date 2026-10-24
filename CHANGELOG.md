@@ -66,6 +66,7 @@ Half-lives: inherited 45 days (new); others unchanged.
 ### Executive view
 
 - `/` is now a leadership view: posture tiles, today's summary as readable paragraphs, the top ten risks with a plain-language *why now* and *our exposure* and a weekly trend, actively exploited items with an *in our estate?* answer, blind spots, and movers. Light theme, system font, every section titled, subtitled and ruled.
+- Dark theme: follows the system preference, with an Auto / Dark / Light toggle in the masthead remembered per browser and applied before first paint. Every color is a token, so both themes share one layout.
 - The previous dashboard is the analyst view at `/analyst`, minus the Claude token counter.
 - Drivers carry structured fields (`cve`, `flags`, `exploitation`, `source`, `surfaces`, `confirmed`) so views can phrase them without parsing labels.
 

@@ -1,11 +1,13 @@
 {% extends "base.html" %}
-{% block styles %}<link rel="stylesheet" href="{{ static_prefix|default('/static') }}/exec.css">{% endblock %}
+{% block styles %}<link rel="stylesheet" href="{{ static_prefix|default('/static') }}/exec.css">
+{% if live %}<script src="/static/theme.js"></script>{% endif %}{% endblock %}
 {% block body %}
 <header class="mast">
   <div class="wrap">
     <div class="mark"><span class="b">Un</span><span class="a">KEV</span></div>
     <div class="tagline">Emerging-vulnerability forecast</div>
     <div class="updated">{% if ts %}Updated {{ ts_ago }}{% else %}No forecast yet{% endif %}</div>
+    {% if live %}<button class="theme-btn" type="button" data-mode="auto" title="Theme: Auto (click to change)">Auto</button>{% endif %}
   </div>
 </header>
 
