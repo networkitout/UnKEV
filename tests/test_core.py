@@ -397,6 +397,35 @@ class Pipeline(unittest.TestCase):
             db.set_kv("nvd_history_from", (datetime.now(timezone.utc) - timedelta(days=10)).date().isoformat())
             self.assertIn(history_days(db), (10, 11))   # date-only value is accepted
 
+    def test_nvd_retries_transient_errors(self):
+        import asyncio
+        from unittest import mock
+        from app.collectors import nvd
+
+        class Resp:
+            def __init__(self, status):
+                self.status_code = status
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise RuntimeError(f"HTTP {self.status_code}")
+
+        class Client:
+            statuses = [503, 503, 200]
+            async def get(self, url, params=None, headers=None):
+                return Resp(self.statuses.pop(0))
+
+        with mock.patch.object(nvd.asyncio, "sleep", mock.AsyncMock()) as slept:
+            r = asyncio.run(nvd._get_page(Client(), "u", {}, {}))
+            self.assertEqual(r.status_code, 200)
+            self.assertEqual([c.args[0] for c in slept.call_args_list], [5, 10])   # linear backoff
+        Client.statuses = [503] * nvd.RETRIES
+        with mock.patch.object(nvd.asyncio, "sleep", mock.AsyncMock()):
+            with self.assertRaises(RuntimeError):
+                asyncio.run(nvd._get_page(Client(), "u", {}, {}))                   # gives up after RETRIES
+        Client.statuses = [404]
+        with self.assertRaises(RuntimeError):
+            asyncio.run(nvd._get_page(Client(), "u", {}, {}))                       # 4xx is not retried
+
     def test_nvd_window_guard(self):
         import asyncio
         from app.collectors.nvd import MAX_WINDOW_DAYS, fetch_nvd_window

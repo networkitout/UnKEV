@@ -62,9 +62,9 @@ def process_nvd_page(vulns: list[dict], db: DB, matcher, cfg: dict) -> dict:
         stats["matched"] += 1
         iid = item_id("nvd", cid_str)
         queue = cvss is not None and cvss >= cfg.get("llm_tag_min_cvss", 8.0)
-        db.upsert_intel(id=iid, source="nvd", url=url, title=cid_str, published_at=published,
-                        raw_text=desc, status="new" if queue else "extracted")
-        stats["queued"] += int(queue)
+        new = db.upsert_intel(id=iid, source="nvd", url=url, title=cid_str, published_at=published,
+                              raw_text=desc, status="new" if queue else "extracted")
+        stats["queued"] += int(queue and new)   # count what actually entered the queue
         for c in comps:
             db.add_signal(intel_id=iid, component_id=c, origin="nvd", cve=cid_str, cvss=cvss,
                           exploitation="unknown", observed_at=published, confidence=conf,
@@ -82,8 +82,24 @@ def nvd_pause(api_key: str | None) -> float:
 
 
 def _nvd_ts(dt: datetime) -> str:
-    # TODO(verify) NVD 2.0 date format, including the required milliseconds and offset.
+    # Format verified live 2026-10-23: milliseconds and an explicit offset are accepted.
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000+00:00")
+
+
+RETRY_STATUSES = {429, 500, 502, 503, 504}
+RETRIES = 5
+
+
+async def _get_page(client, url: str, params: dict, headers: dict):
+    """NVD answers 503 intermittently under normal load. Back off and retry
+    before giving up on a whole window."""
+    for attempt in range(RETRIES):
+        r = await client.get(url, params=params, headers=headers)
+        if r.status_code not in RETRY_STATUSES or attempt == RETRIES - 1:
+            r.raise_for_status()
+            return r
+        await asyncio.sleep(5 * (attempt + 1))
+    raise AssertionError("unreachable")
 
 
 async def fetch_nvd_window(client, db: DB, matcher, cfg: dict, api_key: str | None,
@@ -92,7 +108,7 @@ async def fetch_nvd_window(client, db: DB, matcher, cfg: dict, api_key: str | No
 
     date_field selects which NVD date the window applies to: "lastMod" for
     incremental sync (anything touched since last run), "pub" for backfill
-    (anything published in the window). TODO(verify) the parameter names.
+    (anything published in the window). Both parameter names verified live.
     """
     if end - start > timedelta(days=MAX_WINDOW_DAYS):
         raise ValueError(f"NVD window {start}..{end} exceeds {MAX_WINDOW_DAYS} days")
@@ -104,8 +120,7 @@ async def fetch_nvd_window(client, db: DB, matcher, cfg: dict, api_key: str | No
             f"{date_field}StartDate": _nvd_ts(start), f"{date_field}EndDate": _nvd_ts(end),
             "resultsPerPage": 2000, "startIndex": idx,
         }
-        r = await client.get(cfg["url"], params=params, headers=headers)
-        r.raise_for_status()
+        r = await _get_page(client, cfg["url"], params, headers)
         data = r.json()
         s = process_nvd_page(data.get("vulnerabilities") or [], db, matcher, cfg)
         for k in total:
