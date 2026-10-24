@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import html
 import io
 import secrets
 from contextlib import asynccontextmanager
@@ -97,7 +98,7 @@ async def run_job(request: Request, job: str, _: str = Depends(require_auth)):
     if started:
         asyncio.create_task(pipeline.run(job))
     msg = f"Started {job}. Refresh in a minute." if started else "A run is already in progress."
-    return HTMLResponse(f'<span class="run-msg">{msg}</span>')
+    return HTMLResponse(f'<span class="run-msg">{html.escape(msg)}</span>')
 
 
 @app.get("/api/scores")
