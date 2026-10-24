@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+preview.html
+kev.json
+
+# SQLite DB and WAL files
+unkev.db*
+# Legacy name, so old local DBs aren't committed
+kevcast.db*

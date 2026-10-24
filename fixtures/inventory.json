@@ -1,0 +1,931 @@
+{
+ "_note": "Synthetic demo data. Not real inventory.",
+ "software": [
+  {
+   "hostname": "web-01.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "8.2.34",
+   "host": {
+    "internet_facing": true,
+    "criticality": "high"
+   }
+  },
+  {
+   "hostname": "web-02.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "8.3.35",
+   "host": {
+    "internet_facing": true,
+    "criticality": "high"
+   }
+  },
+  {
+   "hostname": "web-03.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "8.2.34",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-04.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "7.4.33",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-05.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "8.3.35",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-06.example.internal",
+   "software_name": "php-fpm",
+   "software_version": "8.3.35",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-01.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": true,
+    "criticality": "high"
+   }
+  },
+  {
+   "hostname": "web-02.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": true,
+    "criticality": "high"
+   }
+  },
+  {
+   "hostname": "web-03.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-04.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-05.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "web-06.example.internal",
+   "software_name": "nginx",
+   "software_version": "1.26.2",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-01.example.internal",
+   "software_name": "Node.js",
+   "software_version": "18.20.4",
+   "host": {
+    "internet_facing": true,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-02.example.internal",
+   "software_name": "Node.js",
+   "software_version": "22.23.3",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-03.example.internal",
+   "software_name": "Node.js",
+   "software_version": "24.22.0",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-04.example.internal",
+   "software_name": "Node.js",
+   "software_version": "18.20.4",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-05.example.internal",
+   "software_name": "Node.js",
+   "software_version": "22.23.3",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-06.example.internal",
+   "software_name": "Node.js",
+   "software_version": "18.20.4",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-07.example.internal",
+   "software_name": "Node.js",
+   "software_version": "22.23.3",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-08.example.internal",
+   "software_name": "Node.js",
+   "software_version": "22.23.3",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "app-09.example.internal",
+   "software_name": "Node.js",
+   "software_version": "22.23.3",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "srv-01.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-02.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-03.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-04.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-05.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-06.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-07.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-08.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-09.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-10.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-11.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-12.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-13.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-14.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-15.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-16.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-17.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-18.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-19.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-20.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-21.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-22.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-23.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-24.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-25.example.internal",
+   "software_name": "curl",
+   "software_version": "8.9.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-01.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-02.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-03.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-04.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-05.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-06.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-07.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-08.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-09.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-10.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-11.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-12.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-13.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-14.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-15.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-16.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-17.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-18.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-19.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-20.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-21.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-22.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-23.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-24.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "srv-25.example.internal",
+   "software_name": "OpenSSL",
+   "software_version": "3.0.13",
+   "host": {
+    "internet_facing": false,
+    "criticality": "low"
+   }
+  },
+  {
+   "hostname": "doc-03.example.internal",
+   "software_name": "ImageMagick",
+   "software_version": "7.1.1-30",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "doc-03.example.internal",
+   "software_name": "Ghostscript",
+   "software_version": "10.02.1",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "py-01.example.internal",
+   "software_name": "python3",
+   "software_version": "3.11.9",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "py-02.example.internal",
+   "software_name": "python3",
+   "software_version": "3.11.9",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  },
+  {
+   "hostname": "py-03.example.internal",
+   "software_name": "python3",
+   "software_version": "3.11.9",
+   "host": {
+    "internet_facing": false,
+    "criticality": "medium"
+   }
+  }
+ ],
+ "hosts": [
+  {
+   "hostname": "win-01.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "tier1"
+  },
+  {
+   "hostname": "win-02.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "tier1"
+  },
+  {
+   "hostname": "win-03.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "tier1"
+  },
+  {
+   "hostname": "win-04.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "tier1"
+  },
+  {
+   "hostname": "win-05.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-06.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-07.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-08.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-09.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-10.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-11.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-12.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-13.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-14.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-15.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-16.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-17.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-18.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-19.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-20.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-21.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-22.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-23.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-24.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-25.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-26.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-27.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-28.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-29.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-30.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-31.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-32.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-33.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-34.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-35.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-36.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-37.example.internal",
+   "os_version": "Windows Server 2012 R2",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-38.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-39.example.internal",
+   "os_version": "Windows Server 2019",
+   "internet_facing": false,
+   "criticality": "medium"
+  },
+  {
+   "hostname": "win-40.example.internal",
+   "os_version": "Windows Server 2022",
+   "internet_facing": false,
+   "criticality": "medium"
+  }
+ ]
+}

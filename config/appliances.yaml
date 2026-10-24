@@ -1,0 +1,25 @@
+# Declared exposure for things host inventory can't see inside: appliances,
+# vendor VMs, SaaS edges. Each entry adds hosts to every component in `embeds`.
+#
+# Fill `embeds` only from evidence: vendor SBOM/VEX, a support statement,
+# or your own inspection. Set `evidence` so the dashboard can show where the
+# claim came from. Entries without evidence are shown as "declared, unverified".
+#
+# Example shape. The embeds lists here are illustrative, NOT verified for
+# these products.
+
+appliances: []
+#  - name: NetScaler MPX pair (DMZ)
+#    component: netscaler
+#    count: 2
+#    internet_facing: 2
+#    criticality: critical
+#    embeds: [php, apache-httpd, openssl]
+#    evidence: "TODO: vendor SBOM or firmware inspection"
+#  - name: Secure Email Gateway
+#    component: cisco-asyncos
+#    count: 2
+#    internet_facing: 2
+#    criticality: high
+#    embeds: []
+#    evidence: ""

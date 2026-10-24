@@ -1,0 +1,50 @@
+# Inventory adapter: your CMDB, asset system or EDR exposure API.
+#
+# The endpoint paths and field names below are PLACEHOLDERS. Point them at
+# whatever route returns
+# per-host software (or host + OS) records, then run:
+#   python -m scripts.inventory_probe
+# which fetches one page and shows how each record maps.
+#
+# mode: fixture  -> read fixtures/inventory.json (no network)
+# mode: api      -> call the inventory API
+
+mode: fixture
+fixture_path: fixtures/inventory.json
+
+base_url: https://inventory.internal.example
+verify_tls: true            # or a path to your internal CA bundle
+auth:
+  header: Authorization
+  scheme: Bearer
+  token_env: INVENTORY_API_TOKEN
+
+sources:
+  # Per-host installed software. Needs application-level inventory
+  # (e.g. Falcon Discover / Exposure Management apps). Without it, runtime
+  # components like PHP will show exposure "unknown", not zero.
+  software:
+    path: /api/v1/inventory/software      # placeholder
+    params: {limit: 500}
+    items_path: items
+    pagination: {type: offset, param: offset, size_param: limit}
+    fields:
+      host: hostname
+      name: software_name
+      version: software_version
+      internet_facing: host.internet_facing
+      criticality: host.criticality
+  # Per-host OS. Used for OS-level components (windows).
+  hosts:
+    path: /api/v1/assets                  # placeholder
+    params: {limit: 500}
+    items_path: items
+    pagination: {type: offset, param: offset, size_param: limit}
+    fields:
+      host: hostname
+      os: os_version
+      internet_facing: internet_facing
+      criticality: criticality
+
+# criticality values counted as "critical" in exposure scoring
+critical_values: [critical, high, tier0, tier1, "1"]

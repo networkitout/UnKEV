@@ -1,0 +1,42 @@
+# Deterministic scoring model. Claude never writes these values.
+# Tune with scripts/backtest.py; commit changes so scores stay reproducible.
+version: 1
+
+# Likelihood = weighted sum of four terms, scaled to 0-100.
+weights:
+  prior: 0.25       # structural risk of the component (components.yaml priors)
+  activity: 0.30    # recent CVEs / emergency releases on the component itself
+  spillover: 0.20   # same attack surface just broke somewhere else (variant analysis)
+  exploit: 0.25     # KEV, confirmed or attempted exploitation, EPSS
+
+half_life_days:
+  activity: 21
+  spillover: 30
+  exploit: 45
+
+# Per-signal bonuses added to activity before saturation.
+bonuses:
+  emergency_release: 0.5
+  poc_public: 0.4
+  embargo_broken: 0.3
+
+# Spillover: each signal pushes this much (before decay and saturation)
+# onto every *other* component that shares one of its attack surfaces.
+spillover_per_signal: 0.35
+
+# Exploitation levels (max over signals, decayed).
+exploit_levels:
+  confirmed: 1.0
+  attempts: 0.6
+  none: 0.0
+  unknown: 0.0
+epss_weight: 0.8   # EPSS probability * this, competes in the same max()
+
+# Exposure (estate-specific) multiplies likelihood into priority.
+exposure:
+  floor: 0.35            # priority = likelihood * (floor + (1-floor) * exposure)
+  unknown_default: 0.5   # no inventory evidence either way: do not treat as zero
+  none_value: 0.05       # inventory says confirmed absent
+
+# Signals older than this are ignored entirely.
+max_signal_age_days: 180

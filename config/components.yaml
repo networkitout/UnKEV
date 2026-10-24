@@ -1,0 +1,353 @@
+# Component catalog.
+#
+# priors are analyst estimates (0-3 except memory_unsafe 0/1). They are the
+# least evidence-backed part of the model: treat them as hypotheses, tune
+# them with scripts/backtest.py, and record why when you change one.
+#   memory_unsafe  C/C++ core that handles untrusted input
+#   preauth        how much attacker-controlled input it parses before auth
+#   install_base   how widely deployed
+#   embedding      how often it ships *inside* other products / appliances
+#   legacy_tail    how many EOL deployments linger in the wild
+#
+# surfaces use the fixed vocabulary in app/vocab.py. Spillover flows
+# between components that share a surface.
+#
+# inventory.absence_means: "none" | "unknown". Default is "unknown" for
+# library ecosystems (host app inventory rarely sees vendored libraries) and
+# "none" otherwise. A miss on an "unknown" component is a visibility gap.
+#
+# Matchers:
+#   aliases    case-insensitive whole-word match against intel text
+#   cpe        "vendor:product" pairs matched against NVD cpeMatch criteria
+#   kev        [vendorProject_regex, product_regex] against CISA KEV
+#   inventory  regexes applied to inventory software names / OS strings
+
+php:
+  name: PHP
+  ecosystem: runtime
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [http-parsing, multipart-upload, session-state, serialization, archive, image-codec]
+  aliases: ["PHP", "php-fpm", "mod_php", "php-cgi", "PHP2Shell"]
+  cpe: ["php:php"]
+  kev: [["^php$", "php"]]
+  inventory: {software: ["^php(-fpm|-cli|-common)?\\d*([ .-]|$)"]}
+
+nodejs:
+  name: Node.js
+  ecosystem: runtime
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [http-parsing, compression, dns, ip-canonicalization, tls-validation, auth-session-reuse]
+  aliases: ["Node.js", "NodeJS", "undici", "llhttp"]
+  cpe: ["nodejs:node.js", "nodejs:undici"]
+  kev: [["node", "node"]]
+  inventory: {software: ["^node(\\.?js)?([ .-]|$)"]}
+
+nextjs:
+  name: Next.js
+  ecosystem: framework
+  priors: {memory_unsafe: 0, preauth: 3, install_base: 2, embedding: 1, legacy_tail: 2}
+  surfaces: [http-parsing, image-codec, template-engine, path-handling]
+  aliases: ["Next.js"]
+  cpe: ["vercel:next.js"]
+  kev: [["vercel", "next"]]
+  inventory: {software: ["^next(\\.js)?$"]}
+
+python:
+  name: CPython
+  ecosystem: runtime
+  priors: {memory_unsafe: 1, preauth: 1, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [ip-canonicalization, archive, xml, compression, path-handling]
+  aliases: ["CPython"]
+  cpe: ["python:python"]
+  kev: [["python", "python"]]
+  inventory: {software: ["^python3?(\\.\\d+)?([ .-]|$)"]}
+
+perl:
+  name: Perl
+  ecosystem: runtime
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 2, embedding: 3, legacy_tail: 3}
+  surfaces: [http-parsing, multipart-upload, serialization]
+  aliases: ["Perl"]
+  cpe: ["perl:perl"]
+  kev: [["perl", "perl"]]
+  inventory: {software: ["^perl([ .-]|$)"]}
+
+openjdk:
+  name: Java runtime
+  ecosystem: runtime
+  priors: {memory_unsafe: 0, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [serialization, xml, template-engine, tls-validation]
+  aliases: ["OpenJDK", "Java SE", "JRE"]
+  cpe: ["oracle:jdk", "oracle:jre", "oracle:openjdk"]
+  kev: [["oracle", "java"]]
+  inventory: {software: ["openjdk", "java( se)?( runtime)?", "^jre"]}
+
+apache-httpd:
+  name: Apache HTTP Server
+  ecosystem: web-server
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [http-parsing, path-handling, multipart-upload, tls-validation]
+  aliases: ["Apache HTTP Server", "httpd", "Apache httpd"]
+  cpe: ["apache:http_server"]
+  kev: [["apache", "http server|httpd"]]
+  inventory: {software: ["^httpd([ .-]|$)", "^apache2?([ .-]|$)", "apache http server"]}
+
+nginx:
+  name: nginx
+  ecosystem: web-server
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [http-parsing, dns, tls-validation, compression]
+  aliases: ["nginx", "NGINX Plus"]
+  cpe: ["f5:nginx", "nginx:nginx"]
+  kev: [["nginx|f5", "nginx"]]
+  inventory: {software: ["^nginx"]}
+
+haproxy:
+  name: HAProxy
+  ecosystem: proxy
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 2, legacy_tail: 2}
+  surfaces: [http-parsing, tls-validation]
+  aliases: ["HAProxy"]
+  cpe: ["haproxy:haproxy"]
+  kev: [["haproxy", "haproxy"]]
+  inventory: {software: ["^haproxy"]}
+
+squid:
+  name: Squid
+  ecosystem: proxy
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 2, legacy_tail: 3}
+  surfaces: [http-parsing, dns, auth-session-reuse]
+  aliases: ["Squid proxy", "Squid cache"]
+  cpe: ["squid-cache:squid"]
+  kev: [["squid", "squid"]]
+  inventory: {software: ["^squid"]}
+
+openssl:
+  name: OpenSSL
+  ecosystem: crypto-lib
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [tls-validation, document-parser]
+  aliases: ["OpenSSL", "libssl"]
+  cpe: ["openssl:openssl"]
+  kev: [["openssl", "openssl"]]
+  inventory: {software: ["^openssl", "^libssl"]}
+
+curl:
+  name: curl / libcurl
+  ecosystem: client-lib
+  priors: {memory_unsafe: 1, preauth: 1, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [http-parsing, auth-session-reuse, tls-validation, ip-canonicalization]
+  aliases: ["curl", "libcurl"]
+  cpe: ["haxx:curl", "haxx:libcurl"]
+  kev: [["haxx|curl", "curl"]]
+  inventory: {software: ["^(lib)?curl"]}
+
+c-ares:
+  name: c-ares
+  ecosystem: dns-lib
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [dns]
+  aliases: ["c-ares"]
+  cpe: ["c-ares:c-ares", "c-ares_project:c-ares"]
+  kev: [["c-ares", "c-ares"]]
+  inventory: {software: ["c-ares"]}
+
+glibc:
+  name: glibc
+  ecosystem: system-lib
+  priors: {memory_unsafe: 1, preauth: 1, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [dns, ip-canonicalization]
+  aliases: ["glibc", "GNU C Library"]
+  cpe: ["gnu:glibc"]
+  kev: [["gnu", "glibc|c library"]]
+  inventory: {software: ["^glibc", "^libc6"]}
+
+zlib:
+  name: zlib
+  ecosystem: compression
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [compression]
+  aliases: ["zlib"]
+  cpe: ["zlib:zlib"]
+  kev: [["zlib", "zlib"]]
+  inventory: {software: ["^zlib"]}
+
+brotli:
+  name: Brotli
+  ecosystem: compression
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [compression]
+  aliases: ["Brotli"]
+  cpe: ["google:brotli"]
+  kev: [["google", "brotli"]]
+  inventory: {software: ["brotli"]}
+
+zstd:
+  name: Zstandard
+  ecosystem: compression
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [compression]
+  aliases: ["zstd", "Zstandard"]
+  cpe: ["facebook:zstandard"]
+  kev: [["facebook|meta", "zstandard"]]
+  inventory: {software: ["zstd"]}
+
+libarchive:
+  name: libarchive
+  ecosystem: archive
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [archive, compression, path-handling]
+  aliases: ["libarchive", "bsdtar"]
+  cpe: ["libarchive:libarchive"]
+  kev: [["libarchive|microsoft", "libarchive"]]
+  inventory: {software: ["libarchive", "bsdtar"]}
+
+xz:
+  name: XZ Utils
+  ecosystem: compression
+  priors: {memory_unsafe: 1, preauth: 1, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [compression, archive]
+  aliases: ["XZ Utils", "liblzma"]
+  cpe: ["tukaani:xz"]
+  kev: [["tukaani", "xz"]]
+  inventory: {software: ["^xz", "liblzma"]}
+
+libxml2:
+  name: libxml2
+  ecosystem: parser
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [xml, document-parser]
+  aliases: ["libxml2"]
+  cpe: ["xmlsoft:libxml2"]
+  kev: [["xmlsoft|gnome", "libxml2"]]
+  inventory: {software: ["libxml2"]}
+
+expat:
+  name: Expat
+  ecosystem: parser
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [xml]
+  aliases: ["libexpat", "Expat XML"]
+  cpe: ["libexpat_project:libexpat"]
+  kev: [["libexpat", "libexpat"]]
+  inventory: {software: ["expat"]}
+
+libwebp:
+  name: libwebp
+  ecosystem: codec
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 3, legacy_tail: 2}
+  surfaces: [image-codec]
+  aliases: ["libwebp", "WebP"]
+  cpe: ["webmproject:libwebp", "google:libwebp"]
+  kev: [["google", "libwebp|webp"]]
+  inventory: {software: ["libwebp"]}
+
+imagemagick:
+  name: ImageMagick
+  ecosystem: codec
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 2, embedding: 2, legacy_tail: 3}
+  surfaces: [image-codec, document-parser]
+  aliases: ["ImageMagick", "GraphicsMagick"]
+  cpe: ["imagemagick:imagemagick", "graphicsmagick:graphicsmagick"]
+  kev: [["imagemagick", "imagemagick"]]
+  inventory: {software: ["imagemagick", "graphicsmagick"]}
+
+ghostscript:
+  name: Ghostscript
+  ecosystem: parser
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 2, embedding: 3, legacy_tail: 3}
+  surfaces: [document-parser]
+  aliases: ["Ghostscript"]
+  cpe: ["artifex:ghostscript"]
+  kev: [["artifex", "ghostscript"]]
+  inventory: {software: ["ghostscript"]}
+
+sqlite:
+  name: SQLite
+  ecosystem: embedded-db
+  priors: {memory_unsafe: 1, preauth: 1, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [document-parser]
+  aliases: ["SQLite"]
+  cpe: ["sqlite:sqlite"]
+  kev: [["sqlite", "sqlite"]]
+  inventory: {software: ["sqlite"]}
+
+openssh:
+  name: OpenSSH
+  ecosystem: remote-access
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 3, embedding: 3, legacy_tail: 3}
+  surfaces: [auth-session-reuse, mgmt-plane]
+  aliases: ["OpenSSH", "sshd"]
+  cpe: ["openbsd:openssh"]
+  kev: [["openbsd", "openssh"]]
+  inventory: {software: ["^openssh"]}
+
+windows:
+  name: Microsoft Windows
+  ecosystem: os
+  priors: {memory_unsafe: 1, preauth: 2, install_base: 3, embedding: 1, legacy_tail: 3}
+  surfaces: [kernel-network, archive, document-parser, auth-session-reuse]
+  aliases: ["Windows Server", "MSMQ", "Windows Shell", "Mark of the Web"]
+  cpe: ["microsoft:windows"]
+  kev: [["^microsoft$", "^win"]]
+  inventory: {os: ["windows"]}
+
+exchange:
+  name: Microsoft Exchange
+  ecosystem: mail
+  priors: {memory_unsafe: 0, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  surfaces: [http-parsing, serialization, auth-session-reuse]
+  aliases: ["Exchange Server"]
+  cpe: ["microsoft:exchange_server"]
+  kev: [["^microsoft$", "exchange"]]
+  inventory: {software: ["exchange server"]}
+
+netscaler:
+  name: Citrix NetScaler ADC/Gateway
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  surfaces: [vpn-gateway, http-parsing, session-state, mgmt-plane]
+  aliases: ["NetScaler", "Citrix ADC", "Citrix Gateway", "CitrixBleed"]
+  cpe: ["citrix:netscaler_application_delivery_controller", "citrix:netscaler_gateway"]
+  kev: [["citrix", "netscaler|adc|gateway"]]
+  inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+
+panos:
+  name: Palo Alto PAN-OS
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 2}
+  surfaces: [vpn-gateway, mgmt-plane, http-parsing]
+  aliases: ["PAN-OS", "GlobalProtect"]
+  cpe: ["paloaltonetworks:pan-os"]
+  kev: [["palo alto", "pan-os|globalprotect"]]
+  inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+
+ivanti-ics:
+  name: Ivanti Connect Secure
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  surfaces: [vpn-gateway, http-parsing, mgmt-plane]
+  aliases: ["Ivanti Connect Secure", "Pulse Secure", "Ivanti Policy Secure"]
+  cpe: ["ivanti:connect_secure", "ivanti:policy_secure"]
+  kev: [["ivanti|pulse", "connect secure|policy secure|pulse"]]
+  inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+
+fortios:
+  name: Fortinet FortiOS
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 2, embedding: 0, legacy_tail: 3}
+  surfaces: [vpn-gateway, mgmt-plane, http-parsing]
+  aliases: ["FortiOS", "FortiGate", "FortiProxy"]
+  cpe: ["fortinet:fortios", "fortinet:fortiproxy"]
+  kev: [["fortinet", "fortios|fortigate|fortiproxy"]]
+  inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
+
+cisco-asyncos:
+  name: Cisco Secure Email (AsyncOS)
+  ecosystem: appliance
+  priors: {memory_unsafe: 1, preauth: 3, install_base: 1, embedding: 0, legacy_tail: 2}
+  surfaces: [document-parser, archive, mgmt-plane]
+  aliases: ["AsyncOS", "Secure Email Gateway", "Cisco ESA"]
+  cpe: ["cisco:asyncos"]
+  kev: [["cisco", "asyncos|secure email|email security"]]
+  inventory: {}   # appliance: not in host inventory; declare in appliances.yaml

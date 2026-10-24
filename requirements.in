@@ -1,0 +1,10 @@
+# Direct dependencies only. Lock with hashes:
+#   pip-compile --generate-hashes -o requirements.txt requirements.in
+#   pip install --require-hashes -r requirements.txt
+# No Anthropic SDK: the Messages API is one POST, done with httpx (app/llm.py).
+fastapi
+uvicorn
+httpx
+jinja2
+pyyaml
+defusedxml

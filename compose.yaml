@@ -1,0 +1,49 @@
+# Migrating from kevcast? The named volume changed. Copy data first:
+#   docker run --rm -v <old_project>_kevcast-data:/from -v <new_project>_unkev-data:/to \
+#     alpine sh -c 'cp -a /from/. /to/ && mv /to/kevcast.db /to/unkev.db 2>/dev/null; true'
+# WAL files (-wal, -shm) belong with the DB. Stop the containers before copying.
+#
+# Web and worker are separate processes sharing one SQLite volume (WAL mode).
+# Web binds to localhost only; put your TLS/SSO reverse proxy in front of it.
+#
+#   demo:  docker compose --profile demo run --rm seed && docker compose up -d web
+#   live:  docker compose up -d web worker
+
+x-common: &common
+  build: .
+  image: unkev:local
+  env_file: .env
+  environment:
+    UNKEV_DB: /data/unkev.db
+  volumes:
+    - unkev-data:/data
+    # Internal CA for your inventory API: mount it, then set verify_tls to this path in inventory.yaml
+    # - /etc/pki/internal-ca.pem:/certs/internal-ca.pem:ro
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  restart: unless-stopped
+
+services:
+  web:
+    <<: *common
+    ports: ["127.0.0.1:8080:8080"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    <<: *common
+    command: ["python", "-m", "app.worker"]
+
+  seed:
+    <<: *common
+    command: ["python", "-m", "scripts.seed_demo"]
+    restart: "no"
+    profiles: [demo]
+
+volumes:
+  unkev-data:

@@ -1,0 +1,54 @@
+{% set r = sel %}
+<div class="detail">
+  <h3>{{ r.name }}</h3>
+  <div class="muted">{{ r.ecosystem }}, rank {{ r.rank }}</div>
+  <div class="big" style="margin-top: 10px"><span class="band {{ r.band }}"></span>{{ "%.1f"|format(r.priority) }}</div>
+  <div class="formula">likelihood {{ "%.1f"|format(r.likelihood) }} × exposure factor {{ "%.2f"|format(r.exposure_factor) }}{% if r.exposure_status == 'unknown' %} (assumed, no inventory evidence){% endif %}</div>
+
+  <div class="terms">
+    {% for k in ['prior', 'activity', 'spillover', 'exploit'] %}{% set cap = r.term_max[k] %}
+      <span>{{ k }}</span>
+      <div class="track"><div class="fill {{ k }}" style="width: {{ (100 * r.points[k] / cap)|round|int }}%"></div></div>
+      <span class="num">{{ r.points[k] }}</span>
+    {% endfor %}
+  </div>
+
+  <div class="sect">Estate exposure</div>
+  <div class="kv">
+    <span class="muted">status</span><span class="exp-{{ r.exposure_status }}">{{ r.exposure_status }}</span>
+    {% if r.exposure_status != 'unknown' %}
+      <span class="muted">hosts</span><span>{{ r.inventory.hosts }}</span>
+      <span class="muted">internet-facing</span><span>{{ r.inventory.internet_facing }}</span>
+      <span class="muted">critical</span><span>{{ r.inventory.critical }}</span>
+    {% endif %}
+    {% if r.inventory.detail and r.inventory.detail.versions %}
+      <span class="muted">versions</span>
+      <span>{% for v, n in r.inventory.detail.versions %}{{ v }} ({{ n }}){{ ', ' if not loop.last }}{% endfor %}</span>
+    {% endif %}
+    {% if r.inventory.detail and r.inventory.detail.declared %}
+      <span class="muted">declared</span>
+      <span>{% for d in r.inventory.detail.declared %}{{ d.name }}, {{ d.via }}, evidence: {{ d.evidence }}{{ '; ' if not loop.last }}{% endfor %}</span>
+    {% endif %}
+  </div>
+  {% if r.exposure_status == 'unknown' %}
+    <p class="muted">No inventory source covers this component. That's a visibility gap, not evidence of absence. Add application inventory or declare it in appliances.yaml.</p>
+  {% endif %}
+
+  <div class="sect">Why it's ranked here</div>
+  {% if r.drivers %}
+  <ul class="drivers">
+    {% for d in r.drivers %}
+      <li>
+        <div class="{{ 'kind-spillover' if d.kind == 'spillover' }}">{% if d.url %}<a href="{{ d.url }}" rel="noopener noreferrer" target="_blank">{{ d.label }}</a>{% else %}{{ d.label }}{% endif %}</div>
+        <div class="meta">{{ 'spillover' if d.kind == 'spillover' else 'direct' }}, {{ origin_label(d.origin) }}, {{ ago(d.observed_at) }}</div>
+        {% if d.evidence %}<div class="ev">{{ d.evidence[:220] }}</div>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+    <p class="muted">No recent signals. This score is structural prior only.</p>
+  {% endif %}
+
+  <div class="sect">Attack surfaces</div>
+  <div class="chips">{% for s in r.surfaces %}<span class="chip">{{ s }}</span>{% endfor %}</div>
+</div>

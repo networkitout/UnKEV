@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+<title>{% block title %}UnKEV{% endblock %}</title>
+<link rel="stylesheet" href="{{ static_prefix|default('/static') }}/app.css">
+{% if live %}<script src="/static/vendor/htmx.min.js" defer></script>{% endif %}
+</head>
+<body>
+{% block body %}{% endblock %}
+</body>
+</html>

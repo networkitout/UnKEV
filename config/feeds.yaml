@@ -1,0 +1,53 @@
+# Intel sources. Structured feeds (kev, nvd, epss) are parsed deterministically.
+# RSS/Atom items are prefiltered locally, then sent to Claude for extraction.
+#
+# Feed URLs below are from memory, not verified for this build. Check each
+# one before enabling: curl -sI <url> | head -1  should return 200 with an
+# XML content-type.
+
+kev:
+  enabled: true
+  url: https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json
+  lookback_days: 120
+
+nvd:
+  enabled: true
+  url: https://services.nvd.nist.gov/rest/json/cves/2.0
+  # First run backfills this many days; later runs resume from the last window.
+  initial_lookback_days: 14
+  # Only matched CVEs at or above this score are queued for surface tagging by Claude.
+  llm_tag_min_cvss: 8.0
+  # Unmatched CVEs at or above this score land in the "not in catalog" list.
+  unmapped_min_cvss: 9.0
+
+epss:
+  enabled: true
+  url: https://api.first.org/data/v1/epss
+  batch_size: 50
+
+rss:
+  enabled: true
+  max_items_per_feed: 40
+  feeds:
+    - {name: CISA advisories, url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"}
+    - {name: BleepingComputer, url: "https://www.bleepingcomputer.com/feed/"}
+    - {name: The Hacker News, url: "https://feeds.feedburner.com/TheHackersNews"}
+    - {name: SecurityWeek, url: "https://www.securityweek.com/feed/"}
+    - {name: Help Net Security, url: "https://www.helpnetsecurity.com/feed/"}
+    - {name: Node.js vulnerability blog, url: "https://nodejs.org/en/feed/vulnerability.xml"}
+    - {name: PHP news, url: "https://www.php.net/feed.atom"}
+
+# Local prefilter: an RSS item is sent to Claude only if it mentions a catalog
+# alias, a CVE ID, or one of these terms. Keeps token spend proportional to signal.
+prefilter_terms:
+  - zero-day
+  - 0-day
+  - exploited
+  - exploitation
+  - emergency
+  - out-of-band
+  - remote code execution
+  - RCE
+  - proof of concept
+  - PoC
+  - embargo
