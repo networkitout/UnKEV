@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import tempfile
@@ -9,7 +10,7 @@ import types
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from app.config import load_yaml
+from app.config import ROOT, load_yaml
 from app.db import DB
 from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
@@ -482,6 +483,30 @@ class RunPill(unittest.TestCase):
         self.assertEqual(run_status_text(started, None), "Done — nothing new scored.")
         self.assertIn("scores from", run_status_text(None, old))                 # observed a foreign run finish
         self.assertEqual(run_status_text(None, None), "Done — refresh the page.")
+
+
+class Vendor(unittest.TestCase):
+    """app loads /static/vendor/htmx.min.js whenever live; the README documents
+    hand-vendoring it, but 0.2.0 shipped without the file, so every hx-* run
+    button died (404 served as JSON -> browser refuses to execute it). Guard
+    the file's existence, shape, and hash against SHA256SUMS."""
+    def test_htmx_present_and_hashed(self):
+        f = ROOT / "app" / "static" / "vendor" / "htmx.min.js"
+        self.assertTrue(f.is_file(), "htmx.min.js is missing; vendor it per app/static/vendor/README.md")
+        data = f.read_bytes()
+        self.assertTrue(data.lstrip().startswith(b"var htmx="))     # looks like htmx, not a 404 body
+        recorded = None
+        for line in (f.parent / "SHA256SUMS").read_text().splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "htmx.min.js" not in line:
+                continue
+            parts = line.split()
+            if len(parts) == 2 and parts[1].lstrip("*") == "htmx.min.js" and len(parts[0]) == 64:
+                recorded = parts[0]
+                break
+        self.assertEqual(recorded, hashlib.sha256(data).hexdigest(), "vendored htmx does not match SHA256SUMS")
+        base = (ROOT / "app" / "templates" / "base.html").read_text()
+        self.assertIn("/static/vendor/htmx.min.js", base)           # and the template loads it
 
 
 class Inventory(unittest.TestCase):
