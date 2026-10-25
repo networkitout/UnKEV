@@ -364,7 +364,7 @@ panos:
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
   embeds:
     - component: php
-      evidence: "Palo Alto advisory: every release of PAN-OS 10.2-12.2 and all Panorama versions vulnerable; WildFire WF-500 also affected. Emergency content update 9163-10313 shipped 2026-10-23; hotfix ETAs about 2026-10-28/30. A dataplane interface is exposed whenever an interface management profile is attached; IPS signatures only help on decrypted management traffic (vendor advisory, reviewed 2026-10-24)"
+      evidence: "Palo Alto advisory: every release of PAN-OS 10.2-12.2 and all Panorama versions vulnerable (management web interface; a dataplane interface only when it carries a management profile, and the signatures require decrypted inbound management traffic). Threat IDs 543004 + 97622-97678, content versions 9162-9164; hotfix ETAs 2026-10-26..30. WildFire WF-500/WF-500-B initially listed affected, vendor corrected to not impacted 2026-10-23 (vendor advisory, reviewed 2026-10-25)"
       confirmed: true
 
 ivanti-ics:
@@ -376,10 +376,9 @@ ivanti-ics:
   cpe: ["ivanti:connect_secure", "ivanti:policy_secure"]
   kev: [["ivanti|pulse", "connect secure|policy secure|pulse"]]
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
-  embeds:
-    - component: php
-      evidence: "Ivanti appliances are reported to be PHP-based (press, 2026-10). No Ivanti advisory seen; not vendor-confirmed"
-      confirmed: false
+  # No embeds as of 2026-10-25: the prior "Ivanti appliances are reported to
+  # be PHP-based (press)" claim had no traceable source. Re-add only with
+  # vendor or source-code evidence, and set `confirmed` after checking it.
 
 fortios:
   name: Fortinet FortiOS
@@ -392,8 +391,8 @@ fortios:
   inventory: {}   # appliance: not in host inventory; declare in appliances.yaml
   embeds:
     - component: php
-      evidence: "Fortinet PSIRT PHP2Shell advisory rates CVE-2026-109618 at 9.8 for affected products. TODO(verify) which FortiOS / FortiProxy builds the advisory lists (vendor advisory, reviewed 2026-10-24)"
-      confirmed: true
+      evidence: "Fortinet PSIRT rates CVE-2026-109618 CVSS v3 9.8 for the 12 products under investigation; none is confirmed affected. FortiOS is on Fortinet's confirmed not-impacted list; FortiProxy appears in neither list. Edge held open, unconfirmed, until the advisory settles what runs PHP (vendor advisory + press, reviewed 2026-10-25)"
+      confirmed: false
 
 cisco-asyncos:
   name: Cisco Secure Email (AsyncOS)

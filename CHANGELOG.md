@@ -82,3 +82,13 @@ Half-lives: inherited 45 days (new); others unchanged.
 - CSV export includes the inherited term.
 - Extraction stats report `edges` proposed per batch.
 - New `AGENTS.md` and `docs/agents/` for the engineering skills (GitHub issue tracker, triage labels, domain docs).
+
+### Fact-check corrections (2026-10-25)
+
+A validation pass against vendor sources fixed three catalog claims that did not hold, plus the backtest scope note:
+
+- `fortios` PHP edge kept open, now `confirmed: false`: Fortinet has 12 products under investigation and none confirmed affected, and FortiOS is on its confirmed not-impacted list — the 9.8 CVSS v3 score is the advisory's for the products under investigation.
+- `panos` PHP edge: removed the WildFire WF-500/WF-500-B claim, which the vendor corrected to not impacted on 2026-10-23. Evidence now cites the mitigation record: Threat IDs 543004 + 97622-97678 in content versions 9162-9164, hotfix ETAs 2026-10-26..30.
+- `ivanti-ics` PHP edge removed: "Ivanti appliances are PHP-based (press)" had no traceable source. Re-add only with vendor or source-code evidence.
+- `scripts/backtest.py` docstring and footer, the README backtest note and both `docs/backtest-*.txt` no longer claim a KEV replay doesn't exercise inherited: it does, along the catalog's `embeds` edges (ablating the inherited weight moves model MRR 0.529 → 0.502 at the same 0.728 hit@k). Spillover still is not exercised: replay signals carry no surfaces. Both docs are re-run against the current 39-component catalog, the 0.1 doc with its Phase-1 weight vector.
+- `config/feeds.yaml` disables the CISA advisories `all.xml` feed (403 on every 2026-10-25 probe) and the README's feed-verification note is date-stamped. The checked-in `preview-analyst.html` is re-rendered from the corrected catalog.

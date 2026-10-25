@@ -60,8 +60,15 @@ class Scoring(unittest.TestCase):
         self.assertEqual(res["php"]["points"]["inherited"], 0)       # never inherits from itself
         d = next(d for d in res["panos"]["drivers"] if d["kind"] == "inherited")
         self.assertEqual(d["label"], "PHP CVE-2026-0001 bundled in Palo Alto PAN-OS")          # vendor-confirmed edge
-        d = next(d for d in res["ivanti-ics"]["drivers"] if d["kind"] == "inherited")
+        # The catalog no longer carries an unconfirmed edge (removed 2026-10-25:
+        # its press claim didn't check out), so build one here to pin the label
+        # and down-weight behavior independent of catalog content.
+        unconf = copy.deepcopy(COMPS)
+        unconf["ivanti-ics"]["embeds"] = [{"component": "php", "confirmed": False, "evidence": "test-only edge"}]
+        res_u = by_id(score_all(unconf, [sig("php")], {}, CFG, NOW))
+        d = next(d for d in res_u["ivanti-ics"]["drivers"] if d["kind"] == "inherited")
         self.assertEqual(d["label"], "PHP CVE-2026-0001 bundled in Ivanti Connect Secure (unconfirmed edge)")
+        self.assertFalse(COMPS["ivanti-ics"].get("embeds"))   # catalog ivanti-ics stays edge-free until there's evidence
 
     def test_confirmed_edge_outweighs_unconfirmed(self):
         confirmed, unconfirmed = copy.deepcopy(COMPS), copy.deepcopy(COMPS)
@@ -366,7 +373,12 @@ class ExecutiveView(unittest.TestCase):
         self.assertTrue(why_now(res["php"]).startswith("Exploited in the wild, per CISA KEV: CVE-2026-0001"))
         self.assertTrue(why_now(res["nodejs"]).startswith("Emergency patch released: CVE-2026-7"))
         self.assertEqual(why_now(res["panos"]), "Bundles PHP, which just had a serious flaw (CVE-2026-0001)")
-        self.assertTrue(why_now(res["ivanti-ics"]).startswith("Bundles PHP, which just had a serious flaw (CVE-2026-0001), vendor impact not yet confirmed"))
+        # The catalog dropped the ivanti-ics edge (2026-10-25); score a copy with
+        # an unconfirmed edge to pin the "not yet confirmed" phrasing.
+        unconf = copy.deepcopy(COMPS)
+        unconf["ivanti-ics"]["embeds"] = [{"component": "php", "confirmed": False, "evidence": "test-only edge"}]
+        res_u = by_id(score_all(unconf, [sig("php", kev=True)], {}, CFG, NOW))
+        self.assertTrue(why_now(res_u["ivanti-ics"]).startswith("Bundles PHP, which just had a serious flaw (CVE-2026-0001), vendor impact not yet confirmed"))
         self.assertTrue(why_now(res["curl"]).startswith("The same kind of flaw just hit Node.js (ip-canonicalization)"))
         self.assertEqual(why_now(res["zlib"]), "No recent activity; this is structural risk only")
         r = dict(res["php"], activity_ratio=3.2)

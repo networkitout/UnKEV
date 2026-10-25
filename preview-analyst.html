@@ -73,6 +73,7 @@ main { padding: 14px 18px 40px; display: grid; gap: 14px; }
 .tag { font-size: 11px; padding: 0 4px; border-radius: 2px; white-space: nowrap; }
 .tag.verified { color: var(--blue); background: rgba(36,150,237,.12); }
 .tag.reported { color: var(--high); background: rgba(217,180,58,.12); }
+.tag.vendor { color: #4ec98c; background: rgba(78,201,140,.12); }
 .tag.inferred { color: var(--muted); background: rgba(134,147,164,.14); }
 .empty { padding: 14px; color: var(--muted); }
 
@@ -212,13 +213,13 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">1</td>
             <td class="name"><a href="?c=php" hx-get="/analyst?c=php"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">PHP</a><span class="eco">runtime</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">41.9</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 65.8%"></div></div>
-                <span class="num">66</span></div></td>
+            <td class="num"><span class="band med"></span><span class="prio">41.6</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 65.4%"></div></div>
+                <span class="num">65</span></div></td>
             <td class="exp-known">
               7 hosts, 2 ext
             </td>
-            <td class="num"><span class="delta up">+24.3</span>
+            <td class="num"><span class="delta up">+24.0</span>
               </td>
             <td class="driver">CVE-2026-109618 (emergency, PoC public, embargo broke, exploitation attempts)</td>
           </tr>
@@ -227,9 +228,9 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">2</td>
             <td class="name"><a href="?c=cisco-asyncos" hx-get="/analyst?c=cisco-asyncos"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Cisco Secure Email (AsyncOS)</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">37.1</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 55.0%"></div></div>
-                <span class="num">55</span></div></td>
+            <td class="num"><span class="band med"></span><span class="prio">36.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 54.4%"></div></div>
+                <span class="num">54</span></div></td>
             <td class="exp-unknown">
               unknown
               
@@ -242,9 +243,9 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">3</td>
             <td class="name"><a href="?c=windows" hx-get="/analyst?c=windows"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Microsoft Windows</a><span class="eco">os</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">36.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 57.8%"></div></div>
-                <span class="num">58</span></div></td>
+            <td class="num"><span class="band med"></span><span class="prio">35.6</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 57.2%"></div></div>
+                <span class="num">57</span></div></td>
             <td class="exp-known">
               40 hosts
             </td>
@@ -257,14 +258,14 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">4</td>
             <td class="name"><a href="?c=ivanti-ics" hx-get="/analyst?c=ivanti-ics"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Ivanti Connect Secure</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">35.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 52.3%"></div></div>
+            <td class="num"><span class="band med"></span><span class="prio">35.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 51.8%"></div></div>
                 <span class="num">52</span></div></td>
             <td class="exp-unknown">
               unknown
               
             </td>
-            <td class="num"><span class="delta up">+0.9</span>
+            <td class="num"><span class="delta up">+1.0</span>
               </td>
             <td class="driver">CISA pushed immediate remediation of an exploited Connect Se (exploitation confirmed)</td>
           </tr>
@@ -273,86 +274,87 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">5</td>
             <td class="name"><a href="?c=f5-bigip" hx-get="/analyst?c=f5-bigip"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">F5 BIG-IP</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">30.6</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 45.4%"></div></div>
-                <span class="num">45</span></div></td>
+            <td class="num"><span class="band med"></span><span class="prio">31.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 46.4%"></div></div>
+                <span class="num">46</span></div></td>
             <td class="exp-unknown">
               unknown
               
             </td>
-            <td class="num"><span class="delta up">+15.9</span>
+            <td class="num"><span class="delta up">+16.7</span>
               </td>
-            <td class="driver">PHP CVE-2026-109618 bundled in F5 BIG-IP (unconfirmed edge)</td>
+            <td class="driver">PHP CVE-2026-109618 bundled in F5 BIG-IP</td>
           </tr>
         
           <tr class="">
             <td class="num muted">6</td>
             <td class="name"><a href="?c=panos" hx-get="/analyst?c=panos"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Palo Alto PAN-OS</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band med"></span><span class="prio">30.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 72.9%"></div></div>
-                <span class="num">73</span></div></td>
+            <td class="num"><span class="band med"></span><span class="prio">30.5</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 73.5%"></div></div>
+                <span class="num">74</span></div></td>
             <td class="exp-declared">
               1 hosts (declared)
             </td>
-            <td class="num"><span class="delta up">+7.4</span>
+            <td class="num"><span class="delta up">+7.8</span>
               </td>
-            <td class="driver">Exploited PAN-OS RCE zero-day patched the same week as Patch (emergency, exploitation confirmed)</td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Palo Alto PAN-OS</td>
           </tr>
         
           <tr class="">
             <td class="num muted">7</td>
             <td class="name"><a href="?c=cisco-expressway" hx-get="/analyst?c=cisco-expressway"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Cisco Expressway</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">28.7</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 42.5%"></div></div>
-                <span class="num">42</span></div></td>
+            <td class="num"><span class="band low"></span><span class="prio">29.4</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 43.5%"></div></div>
+                <span class="num">44</span></div></td>
             <td class="exp-unknown">
               unknown
               
             </td>
-            <td class="num"><span class="delta up">+17.2</span>
+            <td class="num"><span class="delta up">+17.9</span>
               </td>
-            <td class="driver">PHP CVE-2026-109618 bundled in Cisco Expressway (unconfirmed edge)</td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Cisco Expressway</td>
           </tr>
         
           <tr class="">
             <td class="num muted">8</td>
-            <td class="name"><a href="?c=netscaler" hx-get="/analyst?c=netscaler"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Citrix NetScaler ADC/Gateway</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">22.5</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 40.4%"></div></div>
-                <span class="num">40</span></div></td>
-            <td class="exp-declared">
-              2 hosts, 2 ext (declared)
-            </td>
-            <td class="num"><span class="delta up">+10.3</span>
-              </td>
-            <td class="driver">PHP CVE-2026-109618 bundled in Citrix NetScaler ADC/Gateway (unconfirmed edge)</td>
-          </tr>
-        
-          <tr class="">
-            <td class="num muted">9</td>
-            <td class="name"><a href="?c=libarchive" hx-get="/analyst?c=libarchive"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libarchive</a><span class="eco">archive</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">21.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 31.1%"></div></div>
-                <span class="num">31</span></div></td>
+            <td class="name"><a href="?c=fortios" hx-get="/analyst?c=fortios"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Fortinet FortiOS</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">26.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 38.9%"></div></div>
+                <span class="num">39</span></div></td>
             <td class="exp-unknown">
               unknown
               
             </td>
-            <td class="num"><span class="muted">0</span></td>
-            <td class="driver">CVE-2026-69639</td>
+            <td class="num"><span class="delta up">+11.7</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Fortinet FortiOS (unconfirmed edge)</td>
+          </tr>
+        
+          <tr class="">
+            <td class="num muted">9</td>
+            <td class="name"><a href="?c=netscaler" hx-get="/analyst?c=netscaler"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Citrix NetScaler ADC/Gateway</a><span class="eco">appliance</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">23.2</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.6%"></div></div>
+                <span class="num">42</span></div></td>
+            <td class="exp-declared">
+              2 hosts, 2 ext (declared)
+            </td>
+            <td class="num"><span class="delta up">+11.1</span>
+              </td>
+            <td class="driver">PHP CVE-2026-109618 bundled in Citrix NetScaler ADC/Gateway</td>
           </tr>
         
           <tr class="">
             <td class="num muted">10</td>
             <td class="name"><a href="?c=nodejs" hx-get="/analyst?c=nodejs"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Node.js</a><span class="eco">runtime</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">20.9</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.5%"></div></div>
-                <span class="num">42</span></div></td>
+            <td class="num"><span class="band low"></span><span class="prio">20.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 41.3%"></div></div>
+                <span class="num">41</span></div></td>
             <td class="exp-known">
               9 hosts, 1 ext
             </td>
@@ -363,26 +365,25 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
         
           <tr class="">
             <td class="num muted">11</td>
-            <td class="name"><a href="?c=fortios" hx-get="/analyst?c=fortios"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Fortinet FortiOS</a><span class="eco">appliance</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">17.5</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 25.9%"></div></div>
-                <span class="num">26</span></div></td>
+            <td class="name"><a href="?c=libarchive" hx-get="/analyst?c=libarchive"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libarchive</a><span class="eco">archive</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">20.8</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 30.8%"></div></div>
+                <span class="num">31</span></div></td>
             <td class="exp-unknown">
               unknown
               
             </td>
-            <td class="num"><span class="delta up">+2.8</span>
-              </td>
-            <td class="driver">mgmt-plane broke in Palo Alto PAN-OS (no CVE)</td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">CVE-2026-69639</td>
           </tr>
         
           <tr class="">
             <td class="num muted">12</td>
             <td class="name"><a href="?c=curl" hx-get="/analyst?c=curl"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">curl / libcurl</a><span class="eco">client-lib</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">17.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.8%"></div></div>
+            <td class="num"><span class="band low"></span><span class="prio">16.9</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.5%"></div></div>
                 <span class="num">34</span></div></td>
             <td class="exp-known">
               25 hosts
@@ -396,13 +397,13 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">13</td>
             <td class="name"><a href="?c=nginx" hx-get="/analyst?c=nginx"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">nginx</a><span class="eco">web-server</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">16.2</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 27.1%"></div></div>
+            <td class="num"><span class="band low"></span><span class="prio">16.1</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 27.0%"></div></div>
                 <span class="num">27</span></div></td>
             <td class="exp-known">
               6 hosts, 2 ext
             </td>
-            <td class="num"><span class="delta up">+4.7</span>
+            <td class="num"><span class="delta up">+4.6</span>
               </td>
             <td class="driver">compression broke in Node.js (CVE-2026-111497)</td>
           </tr>
@@ -427,9 +428,9 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">15</td>
             <td class="name"><a href="?c=xz" hx-get="/analyst?c=xz"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">XZ Utils</a><span class="eco">compression</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">15.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.6%"></div></div>
-                <span class="num">23</span></div></td>
+            <td class="num"><span class="band low"></span><span class="prio">15.2</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.5%"></div></div>
+                <span class="num">22</span></div></td>
             <td class="exp-unknown">
               unknown
               
@@ -475,8 +476,8 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">18</td>
             <td class="name"><a href="?c=libwebp" hx-get="/analyst?c=libwebp"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">libwebp</a><span class="eco">codec</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">14.1</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.9%"></div></div>
+            <td class="num"><span class="band low"></span><span class="prio">14.0</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.8%"></div></div>
                 <span class="num">21</span></div></td>
             <td class="exp-unknown">
               unknown
@@ -523,7 +524,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=symantec-sepm" hx-get="/analyst?c=symantec-sepm"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Symantec Endpoint Protection Manager</a><span class="eco">mgmt-server</span></td>
             <td class="num"><span class="band low"></span><span class="prio">13.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 34.9%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 34.7%"></div></div>
                 <span class="num">35</span></div></td>
             <td class="exp-none">
               not found
@@ -539,7 +540,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=cb-app-control" hx-get="/analyst?c=cb-app-control"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Carbon Black App Control Server</a><span class="eco">mgmt-server</span></td>
             <td class="num"><span class="band low"></span><span class="prio">12.7</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.2%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 33.1%"></div></div>
                 <span class="num">33</span></div></td>
             <td class="exp-none">
               not found
@@ -597,22 +598,6 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
         
           <tr class="">
             <td class="num muted">26</td>
-            <td class="name"><a href="?c=openssh" hx-get="/analyst?c=openssh"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">OpenSSH</a><span class="eco">remote-access</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">11.4</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 29.7%"></div></div>
-                <span class="num">30</span></div></td>
-            <td class="exp-none">
-              not found
-              
-            </td>
-            <td class="num"><span class="delta up">+1.4</span>
-              </td>
-            <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
-          </tr>
-        
-          <tr class="">
-            <td class="num muted">27</td>
             <td class="name"><a href="?c=sqlite" hx-get="/analyst?c=sqlite"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">SQLite</a><span class="eco">embedded-db</span></td>
             <td class="num"><span class="band low"></span><span class="prio">11.3</span></td>
@@ -627,11 +612,27 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
           </tr>
         
           <tr class="">
+            <td class="num muted">27</td>
+            <td class="name"><a href="?c=openssh" hx-get="/analyst?c=openssh"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">OpenSSH</a><span class="eco">remote-access</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">11.3</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 29.6%"></div></div>
+                <span class="num">30</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="delta up">+1.4</span>
+              </td>
+            <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
+          </tr>
+        
+          <tr class="">
             <td class="num muted">28</td>
             <td class="name"><a href="?c=python" hx-get="/analyst?c=python"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">CPython</a><span class="eco">runtime</span></td>
             <td class="num"><span class="band low"></span><span class="prio">10.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 24.9%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 24.8%"></div></div>
                 <span class="num">25</span></div></td>
             <td class="exp-known">
               3 hosts
@@ -646,7 +647,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=apache-httpd" hx-get="/analyst?c=apache-httpd"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Apache HTTP Server</a><span class="eco">web-server</span></td>
             <td class="num"><span class="band low"></span><span class="prio">10.3</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 27.0%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 26.9%"></div></div>
                 <span class="num">27</span></div></td>
             <td class="exp-none">
               not found
@@ -662,7 +663,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=npm-fast-uri" hx-get="/analyst?c=npm-fast-uri"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">fast-uri (npm)</a><span class="eco">package</span></td>
             <td class="num"><span class="band low"></span><span class="prio">9.2</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 13.7%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 13.6%"></div></div>
                 <span class="num">14</span></div></td>
             <td class="exp-unknown">
               unknown
@@ -678,7 +679,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=squid" hx-get="/analyst?c=squid"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Squid</a><span class="eco">proxy</span></td>
             <td class="num"><span class="band low"></span><span class="prio">9.1</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 23.9%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 23.8%"></div></div>
                 <span class="num">24</span></div></td>
             <td class="exp-none">
               not found
@@ -691,21 +692,6 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
         
           <tr class="">
             <td class="num muted">32</td>
-            <td class="name"><a href="?c=nextjs" hx-get="/analyst?c=nextjs"
-                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Next.js</a><span class="eco">framework</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">8.8</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.9%"></div></div>
-                <span class="num">23</span></div></td>
-            <td class="exp-none">
-              not found
-              
-            </td>
-            <td class="num"><span class="muted">0</span></td>
-            <td class="driver">CVE-2026-96889</td>
-          </tr>
-        
-          <tr class="">
-            <td class="num muted">33</td>
             <td class="name"><a href="?c=npm-ip-address" hx-get="/analyst?c=npm-ip-address"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">ip-address (npm)</a><span class="eco">package</span></td>
             <td class="num"><span class="band low"></span><span class="prio">8.8</span></td>
@@ -721,11 +707,26 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
           </tr>
         
           <tr class="">
+            <td class="num muted">33</td>
+            <td class="name"><a href="?c=nextjs" hx-get="/analyst?c=nextjs"
+                 hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Next.js</a><span class="eco">framework</span></td>
+            <td class="num"><span class="band low"></span><span class="prio">8.7</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.7%"></div></div>
+                <span class="num">23</span></div></td>
+            <td class="exp-none">
+              not found
+              
+            </td>
+            <td class="num"><span class="muted">0</span></td>
+            <td class="driver">CVE-2026-96889</td>
+          </tr>
+        
+          <tr class="">
             <td class="num muted">34</td>
             <td class="name"><a href="?c=perl" hx-get="/analyst?c=perl"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Perl</a><span class="eco">runtime</span></td>
             <td class="num"><span class="band low"></span><span class="prio">8.7</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.8%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 22.7%"></div></div>
                 <span class="num">23</span></div></td>
             <td class="exp-none">
               not found
@@ -741,7 +742,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=haproxy" hx-get="/analyst?c=haproxy"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">HAProxy</a><span class="eco">proxy</span></td>
             <td class="num"><span class="band low"></span><span class="prio">8.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 21.0%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 20.9%"></div></div>
                 <span class="num">21</span></div></td>
             <td class="exp-none">
               not found
@@ -756,8 +757,8 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">36</td>
             <td class="name"><a href="?c=imagemagick" hx-get="/analyst?c=imagemagick"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">ImageMagick</a><span class="eco">codec</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">8.0</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 19.2%"></div></div>
+            <td class="num"><span class="band low"></span><span class="prio">7.9</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 19.1%"></div></div>
                 <span class="num">19</span></div></td>
             <td class="exp-known">
               1 hosts
@@ -785,7 +786,7 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="name"><a href="?c=openjdk" hx-get="/analyst?c=openjdk"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Java runtime</a><span class="eco">runtime</span></td>
             <td class="num"><span class="band low"></span><span class="prio">6.1</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 16.0%"></div></div>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 15.9%"></div></div>
                 <span class="num">16</span></div></td>
             <td class="exp-none">
               not found
@@ -800,15 +801,14 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
             <td class="num muted">39</td>
             <td class="name"><a href="?c=exchange" hx-get="/analyst?c=exchange"
                  hx-target="#forecast" hx-select="#forecast" hx-swap="outerHTML" hx-push-url="true">Microsoft Exchange</a><span class="eco">mail</span></td>
-            <td class="num"><span class="band low"></span><span class="prio">5.6</span></td>
-            <td><div class="lbar"><div class="track"><div class="fill" style="width: 14.6%"></div></div>
-                <span class="num">15</span></div></td>
+            <td class="num"><span class="band low"></span><span class="prio">5.5</span></td>
+            <td><div class="lbar"><div class="track"><div class="fill" style="width: 14.5%"></div></div>
+                <span class="num">14</span></div></td>
             <td class="exp-none">
               not found
               
             </td>
-            <td class="num"><span class="delta up">+0.6</span>
-              </td>
+            <td class="num"><span class="muted">0</span></td>
             <td class="driver">auth-session-reuse broke in curl / libcurl (CVE-2026-19931)</td>
           </tr>
         
@@ -822,8 +822,8 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
 <div class="detail">
   <h3>PHP</h3>
   <div class="muted">runtime, rank 1</div>
-  <div class="big" style="margin-top: 10px"><span class="band med"></span>41.9</div>
-  <div class="formula">likelihood 65.8 × exposure factor 0.64</div>
+  <div class="big" style="margin-top: 10px"><span class="band med"></span>41.6</div>
+  <div class="formula">likelihood 65.4 × exposure factor 0.64</div>
 
   <div class="terms">
     
@@ -833,19 +833,19 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
     
       <span>activity</span>
       <div class="track"><div class="fill activity" style="width: 98%"></div></div>
-      <span class="num">24.6</span>
+      <span class="num">24.5</span>
     
       <span>spillover</span>
       <div class="track"><div class="fill spillover" style="width: 45%"></div></div>
-      <span class="num">6.8</span>
+      <span class="num">6.7</span>
     
       <span>inherited</span>
       <div class="track"><div class="fill inherited" style="width: 0%"></div></div>
       <span class="num">0.0</span>
     
       <span>exploit</span>
-      <div class="track"><div class="fill exploit" style="width: 58%"></div></div>
-      <span class="num">14.4</span>
+      <div class="track"><div class="fill exploit" style="width: 57%"></div></div>
+      <span class="num">14.2</span>
     
   </div>
   
@@ -878,31 +878,31 @@ zlib, Brotli and libarchive are exposure-unknown: host inventory doesn&#39;t see
     
       <li>
         <div class="kind-direct"><a href="https://socradar.io/blog/php2shell-cve-2026-109618-cve-2026-109619/" rel="noopener noreferrer" target="_blank">CVE-2026-109618 (emergency, PoC public, embargo broke, exploitation attempts)</a></div>
-        <div class="meta">direct, seed data, 2d ago</div>
+        <div class="meta">direct, seed data, 3d ago</div>
         <div class="ev">PHP2Shell: unauthenticated RCE via OOM corruption; fixed in 8.5.12/8.4.27/8.3.36/8.2.35; embargo leaked. Attempts seen from 2026-10-17 (Amazon), before the patch. VulnCheck reports a working ASLR-bypass exploit against u</div>
       </li>
     
       <li>
         <div class="kind-direct"><a href="https://labs.beazley.security/advisories/BSL-A1233" rel="noopener noreferrer" target="_blank">CVE-2026-109619 (emergency, PoC public, embargo broke, exploitation attempts)</a></div>
-        <div class="meta">direct, seed data, 2d ago</div>
+        <div class="meta">direct, seed data, 3d ago</div>
         <div class="ev">PHP2Shell: RCE via stale global state, session upload-progress path on mod_php and PHP-FPM. Attempts seen from 2026-10-17 (Amazon), before the patch. VulnCheck reports a working ASLR-bypass exploit against unpatched 8.4.</div>
       </li>
     
       <li>
         <div class="kind-direct"><a href="https://thehackernews.com/2026/10/urgent-php-warns-of-another-unpatched.html" rel="noopener noreferrer" target="_blank">CVE-2026-115560</a></div>
-        <div class="meta">direct, seed data, 14h ago</div>
+        <div class="meta">direct, seed data, 36h ago</div>
         <div class="ev">Third PHP RCE path: session upload progress plus runtime switch of serialize_handler to php before session_start(). Not fixed by the Oct 21 releases; fix in regular release. Mitigation: session.upload_progress.enabled=0.</div>
       </li>
     
       <li>
         <div class="kind-spillover"><a href="https://brandefense.io/security-news/next-js-node-js-security-updates-october-2026/" rel="noopener noreferrer" target="_blank">image-codec broke in Next.js (CVE-2026-96889)</a></div>
-        <div class="meta">spillover, seed data, 9d ago</div>
+        <div class="meta">spillover, seed data, 10d ago</div>
         
       </li>
     
       <li>
         <div class="kind-spillover"><a href="https://senserva.com/patch-tuesday.html" rel="noopener noreferrer" target="_blank">archive broke in Microsoft Windows (CVE-2026-69639)</a></div>
-        <div class="meta">spillover, seed data, 10d ago</div>
+        <div class="meta">spillover, seed data, 11d ago</div>
         
       </li>
     

@@ -44,7 +44,7 @@ UNKEV_PASSWORD=change-me uvicorn app.main:app --port 8080
 
 1. `cp .env.example .env`, then set `ANTHROPIC_API_KEY` and `UNKEV_PASSWORD`. `NVD_API_KEY` is optional but raises rate limits about 10x (a 14-day NVD window is ~36k records; that's 5 minutes without a key, under 1 with). `UNKEV_EXTRACT_MODEL` and `UNKEV_BRIEF_MODEL` default to `claude-opus-5-5`; any model from `GET /v1/models` works.
 2. Point `config/inventory.yaml` at your inventory API and set `mode: api`. Then run `python -m scripts.inventory_probe` until every field resolves (see below).
-3. Verify each feed URL in `config/feeds.yaml`. They came from memory.
+3. Verify each feed URL in `config/feeds.yaml` before it reaches the internet (each one was probe-checked live on 2026-10-25; note the disabled CISA advisories feed).
 4. Lock dependencies once with `./lock.sh`. It writes a hash-pinned `requirements.txt` using the same base image as the build.
 5. Start it:
    ```bash
@@ -174,7 +174,7 @@ python -m scripts.backtest kev.json --start 2025-01 --end 2026-10 --k 10
 
 The backtest replays KEV month by month. It compares the model against three baselines: install base alone, prior alone, and recency (KEV count in the prior 90 days). Recency is the baseline to beat; if the model doesn't, say so.
 
-**Known limits.** A KEV replay exercises prior, activity and exploit only. KEV has no attack-surface tags and no dependency labels, so spillover and inherited are not tested; that needs the extraction history this app accumulates. The replay also feeds signals with no history, so baseline subtraction runs in cold-start mode (β = 0). Don't enable it there, and don't tune weights to win the comparison.
+**Known limits.** A KEV replay exercises prior, activity, exploit and inherited: a KEV entry for a bundled component flows along the catalog's `embeds` edges into every host that embeds it. Spillover is not tested: KEV has no attack-surface tags, so the replay's signals carry none; that needs the extraction history this app accumulates. The replay also feeds signals with no history, so baseline subtraction runs in cold-start mode (β = 0). Don't enable it there, and don't tune weights to win the comparison.
 
 ## Tests
 
@@ -184,9 +184,9 @@ python -m unittest discover -s tests -t . -v
 
 ## Verify before trusting
 
-These came from memory and were not verified against live endpoints in this build:
+Some of these were checked live; verify the rest before trusting them:
 
-- feed URLs (all returned 200 on 2026-10-23. CISA's edge rejects bot user agents without a contact URL, which is why the default `UNKEV_UA` carries the repo link; keep one if you change it)
+- feed URLs (all returned 200 on 2026-10-25 with the default UNKEV_UA, except CISA's `cybersecurity-advisories/all.xml`, which 403s on every probe and is disabled in `config/feeds.yaml`. CISA's edge rejects bot user agents without a contact URL, which is why the UA carries the repo link; keep one if you change it)
 - NVD `pub` date parameter name, 120-day window limit and rate limits (the `lastMod` window, date format and 2000-per-page paging worked live)
 - OSV `page_token` pagination and rate limits (the query endpoint and response shape were checked live on 2026-10-23)
 - CPE product names on the components added in 0.2 (`f5-bigip`, `cisco-expressway`, `symantec-sepm`, `cb-app-control`)

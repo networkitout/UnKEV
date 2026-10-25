@@ -12,10 +12,12 @@ If the model doesn't beat `recency`, the extra machinery isn't earning its
 keep on this data, and you should say so before trusting the dashboard.
 
 Scope limits (be honest about these when you share results):
-  - Exercises prior + activity + exploit only. KEV has no attack-surface tags
-    and no dependency labels, so spillover and inherited are NOT tested here.
-    Testing them needs a labeled history of Claude extractions, which
-    accumulates as the app runs.
+  - Exercises prior, activity, exploit, and inherited: a KEV entry for a
+    bundled component flows along the catalog's `embeds` edges into every
+    host that embeds it. Spillover is NOT exercised: KEV has no
+    attack-surface tags, so replay signals carry none. Testing that, or
+    scoring the edges against reality, needs a labeled history of Claude
+    extractions, which accumulates as the app runs.
   - Signals carry no history, so baseline subtraction runs in cold-start mode
     (beta = 0). Don't pass history_days to enable it; the replay has no
     baseline window to subtract against.
@@ -132,8 +134,8 @@ def main():
         hk = "n/a" if m["hit_at_k"] is None else f"{m['hit_at_k']:.3f}"
         mr = "n/a" if m["mrr"] is None else f"{m['mrr']:.3f}"
         print(f"{n:14} {hk:>7} {mr:>7}")
-    print("\nSpillover and inherited are not exercised by a KEV replay; activity ran in cold-start mode. "
-          "See module docstring.")
+    print("\nSpillover is not exercised by a KEV replay (replay signals carry no surfaces); inherited is, "
+          "along the catalog's embeds edges. Activity ran in cold-start mode. See module docstring.")
 
 
 if __name__ == "__main__":

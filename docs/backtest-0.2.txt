@@ -1,12 +1,17 @@
-UnKEV 0.2 model (after Phase 7) vs CISA KEV catalog 2026.10.23 (1756 entries)
+UnKEV 0.2 model (0.2 weights, inherited term live) vs CISA KEV catalog 2026.10.23 (1756 entries).
+Re-run 2026-10-25 on the current 39-component catalog; the post-Phase-7 recording had 37 components,
+model 0.728 / 0.502 (two package components, npm-ip-address and npm-fast-uri, joined after Phase 7).
+
 python -m scripts.backtest kev.json --start 2025-01 --end 2026-10 --k 10
 
-19 months with catalog KEV hits, 37 components, k=10
+19 months with catalog KEV hits, 39 components, k=10
 
 ranking          hit@k     MRR
-model            0.728   0.502
+model            0.728   0.529
 recency          0.675   0.518
 prior            0.053   0.077
 install_base     0.053   0.070
 
-Spillover and inherited are not exercised by a KEV replay; activity ran in cold-start mode. See module docstring.
+Spillover is not exercised by a KEV replay (replay signals carry no surfaces); inherited is, along
+the catalog's embeds edges (an ablation with the inherited weight at 0 moves model MRR to 0.502,
+same 0.728 hit@k). Activity ran in cold-start mode. See module docstring in scripts/backtest.py.

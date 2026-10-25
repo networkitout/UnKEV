@@ -1,12 +1,18 @@
-UnKEV 0.1 model (Phase 1 tree, before Phase 2) vs CISA KEV catalog 2026.10.23 (1756 entries)
+UnKEV 0.1 weights (Phase 1 vector: prior .25, activity .30, spillover .20, exploit .25; no inherited term)
+vs CISA KEV catalog 2026.10.23 (1756 entries). Re-run 2026-10-25 on the current 39-component catalog;
+the original Phase-1 run recorded 33 components, model 0.737 / 0.507.
+Run with UNKEV_CONFIG_DIR on a copy of config/ carrying the 0.1 weight vector.
+
 python -m scripts.backtest kev.json --start 2025-01 --end 2026-10 --k 10
 
-19 months with catalog KEV hits, 33 components, k=10
+19 months with catalog KEV hits, 39 components, k=10
 
 ranking          hit@k     MRR
-model            0.737   0.507
-recency          0.684   0.524
+model            0.728   0.496
+recency          0.675   0.518
 prior            0.053   0.077
 install_base     0.053   0.070
 
-Spillover is not exercised by a KEV replay. See module docstring.
+Spillover is not exercised by a KEV replay (replay signals carry no surfaces); the 0.1 vector has
+no inherited term, so nothing rides on the catalog's embeds edges here either. Activity ran in
+cold-start mode. See module docstring in scripts/backtest.py.

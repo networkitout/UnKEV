@@ -1,9 +1,10 @@
 # Intel sources. Structured feeds (kev, nvd, epss) are parsed deterministically.
 # RSS/Atom items are prefiltered locally, then sent to Claude for extraction.
 #
-# Feed URLs below are from memory, not verified for this build. Check each
-# one before enabling: curl -sI <url> | head -1  should return 200 with an
-# XML content-type.
+# Feed URLs below verified live on 2026-10-25 with the default UNKEV_UA (all
+# 200), except the CISA advisories feed (403, disabled under rss). CISA's
+# edge rejects bot user agents without a contact URL; keep one when you add
+# or change a URL: curl -sI <url> | head -1  should return 200.
 
 kev:
   enabled: true
@@ -45,13 +46,15 @@ rss:
   enabled: true
   max_items_per_feed: 40
   feeds:
-    - {name: CISA advisories, url: "https://www.cisa.gov/cybersecurity-advisories/all.xml"}
     - {name: BleepingComputer, url: "https://www.bleepingcomputer.com/feed/"}
     - {name: The Hacker News, url: "https://feeds.feedburner.com/TheHackersNews"}
     - {name: SecurityWeek, url: "https://www.securityweek.com/feed/"}
     - {name: Help Net Security, url: "https://www.helpnetsecurity.com/feed/"}
     - {name: Node.js vulnerability blog, url: "https://nodejs.org/en/feed/vulnerability.xml"}
     - {name: PHP news, url: "https://www.php.net/feed.atom"}
+    # CISA advisories, https://www.cisa.gov/cybersecurity-advisories/all.xml:
+    # returned 403 to every probe on 2026-10-25 (default curl UA, the unkev UA,
+    # and with browser Accept headers). Disabled until it answers again.
 
 # Local prefilter: an RSS item is sent to Claude only if it mentions a catalog
 # alias, a CVE ID, or one of these terms. Keeps token spend proportional to signal.
