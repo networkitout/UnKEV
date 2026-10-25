@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import csv
-import html
 import io
 import secrets
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
@@ -15,11 +15,15 @@ from fastapi.templating import Jinja2Templates
 
 from . import pipeline
 from .config import ROOT, get_settings
-from .views import dashboard_context, exec_context, register_filters
+from .views import dashboard_context, exec_context, register_filters, run_status_html, run_status_text
 
 security = HTTPBasic()
 templates = Jinja2Templates(directory=str(ROOT / "app" / "templates"))  # autoescape on for .html
 register_filters(templates.env)
+
+# Who started the current manual run, for the masthead run pill. Manual runs only:
+# worker cycles run jobs one by one and don't pass through here.
+RUN = {"job": None, "started": None}
 
 
 def require_auth(creds: HTTPBasicCredentials = Depends(security)) -> str:
@@ -96,9 +100,22 @@ async def run_job(request: Request, job: str, _: str = Depends(require_auth)):
         raise HTTPException(404, "Unknown job")
     started = not pipeline._lock.locked()
     if started:
+        RUN.update(job=job, started=datetime.now(timezone.utc))
         asyncio.create_task(pipeline.run(job))
-    msg = f"Started {job}. Refresh in a minute." if started else "A run is already in progress."
-    return HTMLResponse(f'<span class="run-msg">{html.escape(msg)}</span>')
+    else:
+        return HTMLResponse(run_status_html("running"), headers={"Cache-Control": "no-store"})
+    return HTMLResponse(run_status_html("running", job))
+
+
+@app.get("/run-status", response_class=HTMLResponse)
+async def run_status(_: str = Depends(require_auth)):
+    """Live state of the pipeline for the masthead pill: updating -> done."""
+    if pipeline._lock.locked():
+        return HTMLResponse(run_status_html("running", RUN.get("job") or ""),
+                            headers={"Cache-Control": "no-store"})
+    ts, _rows = pipeline.Ctx().db.latest_snapshot()
+    return HTMLResponse(run_status_html("done", run_status_text(RUN.get("started"), ts)),
+                        headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/scores")

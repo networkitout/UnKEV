@@ -179,6 +179,37 @@ def ago(ts: str | None) -> str:
     return f"{int(s // 86400)}d ago"
 
 
+def run_status_html(mode: str, text: str = "") -> str:
+    """The masthead run pill ('Update now' feedback). mode 'running' re-requests
+    /run-status every 4 s via the htmx attributes; every other mode drops the
+    poller, so polling stops by itself when the run finishes."""
+    if mode == "running":
+        label = f"Updating {escape(text.strip())}…" if text.strip() else "Updating…"
+        return ('<span class="run-msg active" hx-get="/run-status" hx-trigger="every 4s" '
+                'hx-target="#run-status" hx-swap="innerHTML">'
+                f'<span class="run-dot" aria-hidden="true"></span>{label}</span>')
+    return f'<span class="run-msg">{escape(text)}</span>'
+
+
+def run_status_text(started: datetime | None, snapshot_ts: str | None) -> str:
+    """Done-state copy for the run pill: whether scores changed since the manual
+    run began, and otherwise when the current scores are from."""
+    ts_fresh = False
+    if started and snapshot_ts:
+        try:
+            dt = datetime.fromisoformat(snapshot_ts.replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            ts_fresh = dt > started
+        except ValueError:
+            pass
+    if started and not ts_fresh:
+        return "Done — nothing new scored."
+    if snapshot_ts:
+        return f"Done — scores from {ago(snapshot_ts)}. Refresh."
+    return "Done — refresh the page."
+
+
 def next_run_view(db) -> dict | None:
     """The scheduler's next cycle, persisted as kv `next_run_at` by app/worker
     before it sleeps. None until the first cycle sleeps (fresh install, or no

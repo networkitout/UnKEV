@@ -56,6 +56,10 @@ a:hover { text-decoration: underline; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .run-msg { color: var(--muted); }
 .next-run { color: var(--muted); font-size: 13px; }
+.run-msg.active { color: var(--text); }
+.run-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--accent);
+           margin-right: 6px; vertical-align: 1px; animation: runpulse 1.2s ease-in-out infinite; }
+@keyframes runpulse { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
 
 main { padding: 14px 18px 40px; display: grid; gap: 14px; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
@@ -154,4 +158,4 @@ td.driver { color: var(--muted); max-width: 340px; overflow: hidden; text-overfl
 .health td.fail { color: var(--crit); }
 .health td.ok { color: var(--muted); }
 
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

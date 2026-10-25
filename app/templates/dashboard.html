@@ -12,7 +12,7 @@
   <span id="next-run" class="next-run" data-at="{{ next_run.iso if next_run else '' }}"
         title="When the scheduler runs its next full cycle (kv next_run_at, written by app/worker). 'due now' can also mean the scheduler isn't running."
         {% if not next_run %}hidden{% endif %}>{% if next_run %}{% if next_run.overdue %}Next update due{% else %}Next update {{ next_run.at }}{% endif %}{% endif %}</span>
-  <span id="run-status"></span>
+  <span id="run-status" aria-live="polite"></span>
   <button class="btn" hx-post="/run/score" hx-target="#run-status">Rescore</button>
   <button class="btn primary" hx-post="/run/all" hx-target="#run-status">Run full update</button>
 </header>

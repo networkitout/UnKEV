@@ -15,7 +15,7 @@ from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
 from app.matching import Matcher
 from app.scoring import decay, exposure_score, mean_decay, prior_score, saturate, score_all, validate_config
-from app.views import brief_blocks, brief_html, dashboard_context, estate_phrase, exec_context, exposure_phrase, why_now
+from app.views import brief_blocks, brief_html, dashboard_context, estate_phrase, exec_context, exposure_phrase, run_status_html, run_status_text, why_now
 
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
 CFG = load_yaml("scoring.yaml")
@@ -454,6 +454,34 @@ class NextRun(unittest.TestCase):
             db.set_kv("next_run_at", (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())
             self.assertTrue(exec_context(ctx)["next_run"]["overdue"])
             self.assertTrue(dashboard_context(ctx)["next_run"]["overdue"])
+
+
+class RunPill(unittest.TestCase):
+    def test_pill_states(self):
+        r = run_status_html("running", "all")
+        self.assertIn('hx-get="/run-status"', r)                # polls while running
+        self.assertIn('hx-trigger="every 4s"', r)
+        self.assertIn("Updating all…", r)
+        self.assertIn('class="run-dot"', r)
+        d = run_status_html("done", "Done — scores from 5m ago. Refresh.")
+        self.assertNotIn("hx-get", d)                            # terminal: polling stops
+        self.assertIn("Done — scores from 5m ago", d)
+        self.assertEqual(run_status_html("idle"), '<span class="run-msg"></span>')
+
+    def test_pill_escapes_labels(self):
+        r = run_status_html("running", '<script>x</script>')
+        self.assertNotIn("<script>", r)
+        self.assertIn("&lt;script&gt;", r)
+
+    def test_done_copy(self):
+        started = datetime.now(timezone.utc) - timedelta(minutes=2)
+        fresh = (datetime.now(timezone.utc) - timedelta(seconds=30)).isoformat()
+        old = (started - timedelta(hours=3)).isoformat()
+        self.assertIn("scores from just now", run_status_text(started, fresh))    # scores newer than the click
+        self.assertEqual(run_status_text(started, old), "Done — nothing new scored.")
+        self.assertEqual(run_status_text(started, None), "Done — nothing new scored.")
+        self.assertIn("scores from", run_status_text(None, old))                 # observed a foreign run finish
+        self.assertEqual(run_status_text(None, None), "Done — refresh the page.")
 
 
 class Inventory(unittest.TestCase):
