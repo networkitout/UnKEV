@@ -15,7 +15,7 @@ from app.inventory import aggregate, merge_appliances
 from app.llm import build_extract_messages, clean_doc, validate_findings
 from app.matching import Matcher
 from app.scoring import decay, exposure_score, mean_decay, prior_score, saturate, score_all, validate_config
-from app.views import brief_blocks, brief_html, estate_phrase, exec_context, exposure_phrase, why_now
+from app.views import brief_blocks, brief_html, dashboard_context, estate_phrase, exec_context, exposure_phrase, why_now
 
 NOW = datetime(2026, 10, 22, 12, tzinfo=timezone.utc)
 CFG = load_yaml("scoring.yaml")
@@ -435,6 +435,25 @@ class ExecutiveView(unittest.TestCase):
             self.assertTrue(all(r["exposure_status"] == "unknown" for r in x["blind"]))
             self.assertEqual(len(x["top"]), 10)
             self.assertTrue(all("why" in r and "exposure_long" in r for r in x["top"]))
+
+
+class NextRun(unittest.TestCase):
+    def test_contexts_carry_next_run(self):
+        from app.worker import mark_next_cycle
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(os.path.join(d, "t.db"))
+            ctx = types.SimpleNamespace(db=db, components=COMPS, scoring=CFG)
+            self.assertIsNone(exec_context(ctx)["next_run"])     # no schedule yet: chip stays hidden
+            self.assertIsNone(dashboard_context(ctx)["next_run"])
+            mark_next_cycle(db, 30)
+            n = exec_context(ctx)["next_run"]
+            self.assertFalse(n["overdue"])
+            self.assertTrue(n["at"].endswith(" UTC"))
+            self.assertIn("T", n["iso"])
+            self.assertEqual(dashboard_context(ctx)["next_run"]["at"], n["at"])
+            db.set_kv("next_run_at", (datetime.now(timezone.utc) - timedelta(minutes=1)).isoformat())
+            self.assertTrue(exec_context(ctx)["next_run"]["overdue"])
+            self.assertTrue(dashboard_context(ctx)["next_run"]["overdue"])
 
 
 class Inventory(unittest.TestCase):

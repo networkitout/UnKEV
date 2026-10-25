@@ -92,3 +92,9 @@ A validation pass against vendor sources fixed three catalog claims that did not
 - `ivanti-ics` PHP edge removed: "Ivanti appliances are PHP-based (press)" had no traceable source. Re-add only with vendor or source-code evidence.
 - `scripts/backtest.py` docstring and footer, the README backtest note and both `docs/backtest-*.txt` no longer claim a KEV replay doesn't exercise inherited: it does, along the catalog's `embeds` edges (ablating the inherited weight moves model MRR 0.529 → 0.502 at the same 0.728 hit@k). Spillover still is not exercised: replay signals carry no surfaces. Both docs are re-run against the current 39-component catalog, the 0.1 doc with its Phase-1 weight vector.
 - `config/feeds.yaml` disables the CISA advisories `all.xml` feed (403 on every 2026-10-25 probe) and the README's feed-verification note is date-stamped. The checked-in `preview-analyst.html` is re-rendered from the corrected catalog.
+
+### Update schedule in the masthead (2026-10-25)
+
+- The worker persists its next cycle as kv `next_run_at` (`app/worker.mark_next_cycle`, right before it sleeps). Both views show a **Next update** chip in the masthead: the absolute time with a JS countdown (`static/nextrun.js`, CSP-safe, no new dependencies). Overdue shows **due now** — which can also mean the scheduler isn't running; the tooltip says so. With no schedule yet (fresh install) the chip is hidden, and static previews stay honest (they render neither chip nor button: `live=false`).
+- The executive view gains an **Update now** button posting the existing `/run/all` (same HX header CSRF guard, same `#run-status` message as the analyst run buttons); htmx now loads there too.
+- Tests: contexts carry `next_run`; new `NextRun` case covers fresh-install/scheduled/overdue.

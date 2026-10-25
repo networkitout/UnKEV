@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from markupsafe import Markup, escape
 
@@ -179,6 +179,22 @@ def ago(ts: str | None) -> str:
     return f"{int(s // 86400)}d ago"
 
 
+def next_run_view(db) -> dict | None:
+    """The scheduler's next cycle, persisted as kv `next_run_at` by app/worker
+    before it sleeps. None until the first cycle sleeps (fresh install, or no
+    worker running) — the masthead chip is left out then, honestly."""
+    v = db.get_kv("next_run_at")
+    if not v:
+        return None
+    try:
+        dt = datetime.fromisoformat(v)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return {"iso": dt.isoformat(), "at": dt.strftime("%H:%M UTC"), "overdue": dt <= utcnow()}
+
+
 def spill_grid(ctx, rows: list[dict], signals: list[dict], max_surfaces: int = 8, max_cols: int = 14) -> dict:
     heat = surface_heat(signals, ctx.scoring)
     surfaces = [s for s, _ in sorted(heat.items(), key=lambda x: -x[1])[:max_surfaces]]
@@ -228,6 +244,7 @@ def dashboard_context(ctx, selected: str | None = None) -> dict:
         "record": track_record(ctx),
         "evals": ctx.db.evals(since_iso=iso(utcnow() - timedelta(days=60)))[:30],
         "ts": ts, "ts_ago": ago(ts), "rows": rows, "sel": sel,
+        "next_run": next_run_view(ctx.db),
         "brief": dict(brief) if brief else None,
         "brief_ago": ago(brief["ts"]) if brief else None,
         "grid": spill_grid(ctx, rows, signals),
@@ -293,6 +310,7 @@ def exec_context(ctx, top_n: int = 10) -> dict:
     signals = ctx.db.signals_since(iso(utcnow() - timedelta(days=30)))
     return {
         "ts": ts, "ts_ago": ago(ts),
+        "next_run": next_run_view(ctx.db),
         "grid": spill_grid(ctx, rows, signals, max_surfaces=8, max_cols=12),
         "record": track_record(ctx),
         "kpis": {

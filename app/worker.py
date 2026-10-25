@@ -7,10 +7,19 @@ import logging
 from datetime import datetime, timedelta
 
 from .config import get_settings
-from .db import DB, utcnow
+from .db import DB, iso, utcnow
 from .pipeline import run
 
 log = logging.getLogger("unkev.worker")
+
+
+def mark_next_cycle(db: DB, minutes: int) -> str:
+    """Persist when the next cycle is due, as kv `next_run_at`. The web process
+    reads it from the shared store even when the worker runs separately."""
+    due = iso(utcnow() + timedelta(minutes=minutes))
+    db.set_kv("next_run_at", due)
+    log.info("next cycle at %s", due)
+    return due
 
 
 def brief_is_stale(db: DB, hours: int = 20) -> bool:
@@ -27,6 +36,7 @@ async def loop_forever():
         if brief_is_stale(db):
             await run("brief")
         log.info("cycle complete; sleeping %s min", s.interval_minutes)
+        mark_next_cycle(db, s.interval_minutes)
         await asyncio.sleep(s.interval_minutes * 60)
 
 

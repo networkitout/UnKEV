@@ -7,6 +7,11 @@
     <div class="mark"><span class="b">Un</span><span class="a">KEV</span></div>
     <div class="tagline">Emerging-vulnerability forecast</div>
     <div class="updated">{% if ts %}Updated {{ ts_ago }}{% else %}No forecast yet{% endif %}</div>
+    <span id="next-run" class="next-run" data-at="{{ next_run.iso if next_run else '' }}"
+          title="When the scheduler runs its next full cycle (kv next_run_at, written by app/worker). 'due now' can also mean the scheduler isn't running."
+          {% if not next_run %}hidden{% endif %}>{% if next_run %}{% if next_run.overdue %}Next update due{% else %}Next update {{ next_run.at }}{% endif %}{% endif %}</span>
+    {% if live %}<span id="run-status" class="run-msg" aria-live="polite"></span>
+    <button class="run-btn" type="button" hx-post="/run/all" hx-target="#run-status">Update now</button>{% endif %}
     {% if live %}<button class="theme-btn" type="button" data-mode="auto" title="Theme: Auto (click to change)">Auto</button>{% endif %}
   </div>
 </header>
